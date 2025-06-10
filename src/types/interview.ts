@@ -9,6 +9,7 @@ export interface Interview {
   status: InterviewStatus
   recording: Recording
   evaluation?: InterviewEvaluation
+  aiFeedbackHints?: AIFeedbackHint[];
 }
 
 export enum InterviewStatus {
@@ -59,4 +60,17 @@ export enum QuestionType {
   RESUME = 'resume',
   SCENARIO = 'scenario',
   CLOSING = 'closing'
+}
+
+export interface AIFeedbackHint {
+  timestamp: string; // 提示出现的时间点
+  type: HintType; // 提示的类型
+  message: string; // 提示的具体内容
+}
+
+export enum HintType {
+  PACE_TOO_FAST = 'pace_too_fast', // 语速过快
+  PACE_TOO_SLOW = 'pace_too_slow', // 语速过慢
+  LACK_OF_KEYWORDS = 'lack_of_keywords', // 缺乏关键词
+  FILLER_WORD_OVERUSE = 'filler_word_overuse', // 口头禅过多
 }
