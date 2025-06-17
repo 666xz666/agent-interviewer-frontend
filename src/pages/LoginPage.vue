@@ -97,7 +97,7 @@ import type { FormInstance, FormRules } from 'element-plus';
 import { User, Lock, Message } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { login, register } from '@/api/auth'
+import { login, register,} from '@/api/auth'
 
 const router = useRouter()
 const activeTab = ref('login')
@@ -155,7 +155,7 @@ const validatePass = (rule: any, value: string, callback: any) => {
     }
     callback()
   }
-}
+};
 
 const validatePass2 = (rule: any, value: string, callback: any) => {
   if (value === '') {
@@ -165,7 +165,7 @@ const validatePass2 = (rule: any, value: string, callback: any) => {
   } else {
     callback()
   }
-}
+};
 
 const registerRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -175,7 +175,7 @@ const registerRules = {
   ],
   password: [{ validator: validatePass, trigger: 'blur' }],
   confirmPassword: [{ validator: validatePass2, trigger: 'blur' }]
-}
+};
 
 const handleLogin = async () => {
   if (!loginFormRef.value) return;

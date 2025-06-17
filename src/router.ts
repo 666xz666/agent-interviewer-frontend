@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { loginWithSession } from '@/api/auth'
+import { ElMessage } from 'element-plus'
 
 
 const routes = [
@@ -44,17 +45,16 @@ router.beforeEach(async (to) => {
 
   try {
     // 尝试使用 session 登录
-    await loginWithSession()
-
+    await loginWithSession();
     return true
   } catch (error){
-    console.log(error)
+    ElMessage.error('Session 无效或已过期，请重新登录');
 
     // 登录失败，如果不是访问 about 页面，则重定向到 about
     if (to.path !== '/about') {
       return '/about'
     }
-
     return true
+
   }
 })
