@@ -216,17 +216,25 @@ const handleRegister = async () => {
     if (valid) {
       registerLoading.value = true
       try {
-        await register({
+        const response = await register({
           username: registerForm.username,
           password: registerForm.password,
           email: registerForm.email
         })
-        ElMessage.success('注册成功')
-        activeTab.value = 'login'
-        registerForm.username = ''
-        registerForm.email = ''
-        registerForm.password = ''
-        registerForm.confirmPassword = ''
+        const responseData = response.data;
+        if(responseData.status == 200)
+        {
+          ElMessage.success('注册成功，请登录');
+          activeTab.value = 'login';
+          registerForm.username = '';
+          registerForm.email = '';
+          registerForm.password = '';
+          registerForm.confirmPassword = '';
+        }
+        else
+        {
+          ElMessage.error(responseData.msg || '注册失败，请稍后重试')
+        }
       } catch (error) {
         ElMessage.error('注册失败，请稍后重试')
       } finally {
