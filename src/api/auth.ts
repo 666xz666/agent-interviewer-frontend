@@ -15,12 +15,16 @@ interface RegisterParams {
   email: string
 }
 
-export async function loginWithPassword(username?: string, password?: string): Promise<AxiosResponse<LoginResponse>> {
-  // 使用凭证登录
-  return request.post<LoginResponse>('/auth/login', {
-    username,
-    password
-  })
+
+interface LoginPayload {
+  password?: string;
+  username?: string;
+  email?: string;
+}
+
+export async function login(payload: LoginPayload): Promise<AxiosResponse<LoginResponse>> {
+
+  return request.post<LoginResponse>('/auth/login', payload);
 }
 
 export async function loginWithSession(): Promise<AxiosResponse<LoginResponse>> {

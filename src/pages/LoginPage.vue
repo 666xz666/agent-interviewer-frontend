@@ -15,14 +15,20 @@
           <el-tabs v-model="activeTab" class="auth-tabs">
             <el-tab-pane label="登录" name="login">
               <el-form :model="loginForm" :rules="loginRules" ref="loginFormRef" class="auth-form">
-                <el-form-item prop="username">
+                <el-form-item prop="identifier">
                   <el-input
-                    v-model="loginForm.username"
-                    placeholder="用户名"
+                    v-model="loginForm.identifier"
+                    :placeholder="identifierPlaceholder"
                     prefix-icon="User"
-                  />
+                  >
+                  <template #prepend>
+                    <el-select v-model="loginType" style="width: 90px">
+                      <el-option label="用户名" value="username" />
+                      <el-option label="邮箱" value="email" />
+                    </el-select>
+                  </template>
+                  </el-input>
                 </el-form-item>
-
                 <el-form-item prop="password">
                   <el-input
                     v-model="loginForm.password"
@@ -86,24 +92,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
+import type { FormInstance, FormRules } from 'element-plus';
 import { User, Lock, Message } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { loginWithPassword, register } from '@/api/auth'
+import { login, register } from '@/api/auth'
 
 const router = useRouter()
 const activeTab = ref('login')
 const loginFormRef = ref()
-const registerFormRef = ref()
+const registerFormRef = ref<FormInstance>()
 const loginLoading = ref(false)
 const registerLoading = ref(false)
 
-const loginForm = reactive({
-  username: '',
-  password: ''
-})
+const loginType = ref<'username' | 'email'>('username');
 
+const loginForm = reactive({
+  identifier: '',
+  password: '',
+});
+
+const identifierPlaceholder = computed(() => {
+  return loginType.value === 'username' ? '请输入用户名' : '请输入邮箱地址';
+});
+
+const validateIdentifier = (rule: any, value: any, callback: any) => {
+  if (!value) {
+    // 提示信息也使用动态的 placeholder
+    return callback(new Error(identifierPlaceholder.value));
+  }
+  // 如果是邮箱登录，额外校验格式
+  if (loginType.value === 'email') {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      return callback(new Error('请输入正确的邮箱地址'));
+    }
+  }
+  // 校验通过
+  callback();
+};
 const registerForm = reactive({
   username: '',
   email: '',
@@ -111,10 +139,10 @@ const registerForm = reactive({
   confirmPassword: ''
 })
 
-const loginRules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
-}
+const loginRules = reactive<FormRules>({
+  identifier: [{ validator: validateIdentifier, trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+});
 
 const validatePass = (rule: any, value: string, callback: any) => {
   if (value === '') {
@@ -150,23 +178,36 @@ const registerRules = {
 }
 
 const handleLogin = async () => {
-  if (!loginFormRef.value) return
+  if (!loginFormRef.value) return;
+  try {
+    const valid = await loginFormRef.value.validate();
 
-  await loginFormRef.value.validate(async (valid: boolean) => {
     if (valid) {
-      loginLoading.value = true
-      try {
-        await loginWithPassword(loginForm.username, loginForm.password)
-        ElMessage.success('登录成功')
-        router.push('/')
-      } catch (error) {
-        ElMessage.error('登录失败，请检查用户名和密码')
-      } finally {
-        loginLoading.value = false
+      loginLoading.value = true;
+      const apiPayload = {
+        password: loginForm.password,
+        [loginType.value]: loginForm.identifier
+      };
+      const response = await login(apiPayload);
+      const responseData = response.data;
+      if(responseData.status==200)
+      {
+        ElMessage.success('登录成功');
+        router.push('/');
       }
+      else
+      {
+        ElMessage.error(responseData.msg || '登录失败，请稍后重试');
+      }
+
     }
-  })
-}
+  } catch (error) {
+    console.error("登录处理失败:", error);
+    ElMessage.error('登录失败，请检查您的输入信息');
+  } finally {
+    loginLoading.value = false;
+  }
+};
 
 const handleRegister = async () => {
   if (!registerFormRef.value) return
@@ -404,3 +445,5 @@ const handleRegister = async () => {
   }
 }
 </style>
+
+

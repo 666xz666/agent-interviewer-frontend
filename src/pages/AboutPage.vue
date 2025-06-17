@@ -10,7 +10,7 @@
     </div>
 
     <div class="features-section">
-      <div class="feature-card">
+      <div class="feature-card" @click="router.push('/resume')">
         <el-icon class="feature-icon"><Document /></el-icon>
         <h3>简历优化</h3>
         <p>智能分析简历，提供专业修改建议</p>
