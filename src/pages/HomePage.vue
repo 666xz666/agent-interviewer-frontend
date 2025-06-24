@@ -99,7 +99,13 @@
         </div>
 
         <div v-if="activeMenu === 'resume'" class="resume-management">
-          <h2>简历管理</h2>
+          <div class="header-bar">
+            <h2>简历管理</h2>
+            <el-button type="primary" @click="handleCreateResume">
+              <el-icon><Plus /></el-icon>
+              创建新简历
+            </el-button>
+          </div>
           <el-upload
             class="upload-demo fixed-upload"
             drag
@@ -117,21 +123,64 @@
               </div>
             </template>
           </el-upload>
+            <div class="resume-list" v-if="resumes.length > 0">
+              <h2>我的简历</h2>
+              <el-table :data="resumes" class="fixed-table" style="width: 100%">
+                <el-table-column prop="id" label="序号" />
+                <el-table-column prop="originalFileName" label="文件名" />
+                <el-table-column prop="date" label="上传日期" />
+                <el-table-column label="操作">
+                  <template #default="scope">
+                    <el-button size="small" @click="updateResume(scope.row)">编辑</el-button>
+                    <el-button size="small" @click="viewResume(scope.row)">查看</el-button>
+                    <el-button size="small" type="danger" @click="deleteResume(scope.row)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+            <el-dialog
+              v-if="resumeJsonData"
+              v-model="isDialogVisible"
+              :title="`简历详情: ${resumeJsonData.originalFileName}`"
+              width="70%"
+            >
+              <div class="resume-content">
+                <h3>基本信息</h3>
+                <p><strong>姓名:</strong> {{ resumeJsonData.baseInfo.lastName }}{{ resumeJsonData.baseInfo.firstName }}</p>
+                <p><strong>性别:</strong> {{ resumeJsonData.baseInfo.gender }}</p>
+                <p><strong>年龄:</strong> {{ resumeJsonData.baseInfo.age }}</p>
+                <p><strong>电话:</strong> {{ resumeJsonData.baseInfo.phone }}</p>
+                <p><strong>邮箱:</strong> {{ resumeJsonData.baseInfo.email }}</p>
+                <p><strong>住址:</strong> {{ resumeJsonData.baseInfo.location }}</p>
 
-          <div class="resume-list" v-if="resumes.length > 0">
-            <h3>我的简历</h3>
-            <el-table :data="resumes" class="fixed-table" style="width: 100%">
-              <el-table-column prop="name" label="文件名" />
-              <el-table-column prop="date" label="上传日期" />
-              <el-table-column prop="size" label="文件大小" />
-              <el-table-column label="操作">
-                <template #default="scope">
-                  <el-button size="small" @click="viewResume(scope.row)">查看</el-button>
-                  <el-button size="small" type="danger" @click="deleteResume(scope.row)">删除</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
+                <el-divider />
+
+                <h3>教育背景</h3>
+                <div v-for="(edu, index) in resumeJsonData.educationList" :key="index" class="section-item">
+                  <p><strong>学校:</strong> {{ edu.school }}</p>
+                  <p><strong>学位:</strong> {{ edu.degree }}</p>
+                  <p><strong>专业:</strong> {{ edu.major }}</p>
+                  <p><strong>时间:</strong> {{ edu.startDate }} 至 {{ edu.endDate }}</p>
+                </div>
+
+                <el-divider />
+
+                <h3>工作经历</h3>
+                <div v-for="(work, index) in resumeJsonData.workExperienceList" :key="index" class="section-item">
+                  <p><strong>公司:</strong> {{ work.company }}</p>
+                  <p><strong>职位:</strong> {{ work.position }}</p>
+                  <p><strong>项目描述:</strong> {{ work.description }}</p>
+                  <p><strong>时间:</strong> {{ work.startDate }} 至 {{ work.endDate }}</p>
+                  <p style="white-space: pre-wrap;"><strong>职责:</strong> {{ work.description }}</p>
+                </div>
+              </div>
+
+              <template #footer>
+                <div class="dialog-footer">
+                  <el-button type="primary" @click="isDialogVisible = false">关闭</el-button>
+                </div>
+              </template>
+          </el-dialog>
         </div>
 
         <!-- 其他菜单项的内容可以在这里添加 -->
@@ -150,7 +199,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import {
   House,
   Document,
@@ -162,12 +211,17 @@ import {
   Upload,
   VideoCamera,
   TrendCharts,
+  Plus,
   UploadFilled
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-
+import { ElMessage } from 'element-plus'
+import { getResume, getResumeList, createNewResume} from '@/api/resume'
+import type { ResumeData, ResumeListItem } from '@/api/resume';
 const router = useRouter()
 const activeMenu = ref('dashboard')
+const resumeJsonData = ref<ResumeData | null>(null);
+const isDialogVisible = ref(false);
 const userName = ref('张三')
 const userAvatar = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png')
 
@@ -186,22 +240,75 @@ const activities = ref([
   }
 ])
 
-const resumes = ref([
-  {
-    name: '张三_前端开发工程师.pdf',
-    date: '2023-05-10',
-    size: '2.4MB'
-  },
-  {
-    name: '张三_简历_2023.docx',
-    date: '2023-03-15',
-    size: '1.8MB'
+const resumes = ref<ResumeListItem[]>([]);
+
+// const resumes = ref([
+//   {
+//     id: 2,
+//     originalFileName: '张三_前端开发工程师.pdf',
+//     date: '2023-05-10'
+//   },
+//   {
+//     id: 1,
+//     originalFileName: '张三_简历_2023.docx',
+//     date: '2023-03-15',
+//   }
+// ])
+const handleCreateResume = async () => {
+  const emptyResumePayload: ResumeData = {
+    originalFileName: `新建简历 - ${new Date().toLocaleString()}.json`,
+    baseInfo: {
+      firstName: '',
+      lastName: '',
+      gender: '',
+      age: 0,
+      phone: '',
+      email: '',
+      location: ''
+    },
+    educationList: [],
+    workExperienceList: []
+  };
+
+  try {
+    const response = await createNewResume(emptyResumePayload);
+    const responseData = response.data;
+    if(responseData.status == 200) {
+      const newResume = responseData.data;
+      resumes.value.unshift(newResume);
+      ElMessage.success('新简历创建成功！');
+    }
+    else {
+      ElMessage.error(response.data.msg || '简历创建失败');
+    }
+  } catch (error) {
+    ElMessage.error('请求失败，请稍后重试');
   }
-])
+};
+
+const fetchResumeList = async () => {
+  try {
+    const response = await getResumeList();
+    const responseData = response.data;
+    if(responseData.status == 200) {
+      resumes.value = responseData.data;
+    }
+    else
+    {
+      ElMessage.error(responseData.msg || '获取简历列表失败，请稍后重试');
+    }
+  } catch (error) {
+    ElMessage.error('获取简历列表失败，请稍后重试');
+  }
+};
 
 const handleMenuSelect = (key: string) => {
   activeMenu.value = key
 }
+
+onMounted(() => {
+  fetchResumeList();
+});
 
 const handleUploadSuccess = (response: any, file: any) => {
   console.log('上传成功', response, file)
@@ -213,8 +320,28 @@ const handleUploadSuccess = (response: any, file: any) => {
   })
 }
 
-const viewResume = (resume: any) => {
-  console.log('查看简历', resume)
+const viewResume = async (resume: any) => {
+  console.log('查看简历', resume);
+  if (!resume || !resume.id) {
+    ElMessage.error('无法获取简历，请检查简历是否上传成功');
+    return;
+  }
+  try {
+    const response = await getResume(resume.id);
+    const responseData = response.data;
+    if(responseData.status == 200)
+    {
+      ElMessage.success('简历加载成功！');
+      resumeJsonData.value = responseData;
+      isDialogVisible.value = true;
+    }
+    else
+    {
+      ElMessage.error(responseData.msg || '简历加载失败，请稍后重试');
+    }
+  } catch (error) {
+    ElMessage.error('请求失败，请检查网络或联系管理员');
+  }
 }
 
 const deleteResume = (resume: any) => {
@@ -230,6 +357,21 @@ export default {
 </script>
 
 <style scoped>
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.json-viewer {
+  background-color: #f4f4f5;
+  border-radius: 4px;
+  padding: 16px;
+  overflow-x: auto;
+  line-height: 1.5;
+  font-family: 'Courier New', Courier, monospace;
+}
 /* === 禁止所有滚动 === */
 html, body, #app, .main-container {
   overflow: hidden !important;

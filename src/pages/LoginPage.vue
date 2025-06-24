@@ -97,7 +97,7 @@ import type { FormInstance, FormRules } from 'element-plus';
 import { User, Lock, Message } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { login, register,} from '@/api/auth'
+import { login, register} from '@/api/auth'
 
 const router = useRouter()
 const activeTab = ref('login')
