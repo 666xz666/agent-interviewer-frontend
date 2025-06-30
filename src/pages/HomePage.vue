@@ -51,7 +51,7 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item>个人中心</el-dropdown-item>
-                <el-dropdown-item>退出登录</el-dropdown-item>
+                <el-dropdown-item @click="router.push('/login')">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -126,9 +126,13 @@
             <div class="resume-list" v-if="resumes.length > 0">
               <h2>我的简历</h2>
               <el-table :data="resumes" class="fixed-table" style="width: 100%">
-                <el-table-column prop="id" label="序号" />
+                <el-table-column prop="newIndex" label="序号">
+                  <template #default="scope">
+                    <span>{{ scope.$index + 1 }}</span>
+                  </template>
+                </el-table-column>
                 <el-table-column prop="originalFileName" label="文件名" />
-                <el-table-column prop="date" label="上传日期" />
+                <el-table-column prop="createdAt" label="上传日期" />
                 <el-table-column label="操作">
                   <template #default="scope">
                     <el-button size="small" @click="updateResume(scope.row)">编辑</el-button>
@@ -215,7 +219,8 @@ import {
   UploadFilled
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import axios from 'axios'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getResume, getResumeList, createNewResume} from '@/api/resume'
 import type { ResumeData, ResumeListItem } from '@/api/resume';
 const router = useRouter()
@@ -242,21 +247,14 @@ const activities = ref([
 
 const resumes = ref<ResumeListItem[]>([]);
 
-// const resumes = ref([
-//   {
-//     id: 2,
-//     originalFileName: '张三_前端开发工程师.pdf',
-//     date: '2023-05-10'
-//   },
-//   {
-//     id: 1,
-//     originalFileName: '张三_简历_2023.docx',
-//     date: '2023-03-15',
-//   }
-// ])
+const updateResume = (row) => {
+  router.push(`/pages/ResumeEditPage/${row.resumeId}`);
+};
+
 const handleCreateResume = async () => {
+  const newIndex = resumes.value.length + 1;
   const emptyResumePayload: ResumeData = {
-    originalFileName: `新建简历 - ${new Date().toLocaleString()}.json`,
+    originalFileName: `新建简历 - ${newIndex}`,
     baseInfo: {
       firstName: '',
       lastName: '',
@@ -323,7 +321,7 @@ const handleUploadSuccess = (response: any, file: any) => {
 const viewResume = async (resume: any) => {
   console.log('查看简历', resume);
   if (!resume || !resume.id) {
-    ElMessage.error('无法获取简历，请检查简历是否上传成功');
+    ElMessage.error('无法获取简历，请检查简历内容是否为空');
     return;
   }
   try {
@@ -344,9 +342,44 @@ const viewResume = async (resume: any) => {
   }
 }
 
-const deleteResume = (resume: any) => {
-  console.log('删除简历', resume)
-  resumes.value = resumes.value.filter(r => r.name !== resume.name)
+const deleteResume = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `您确定要删除该简历吗？`,
+      '警告',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    );
+
+    await axios.delete('/api/resume/delete', {
+      params: {
+        resumeId: row.resumeId
+      }
+    });
+    resumes.value = resumes.value.filter(item => item.resumeId !== row.resumeId);
+
+    ElMessage({
+      type: 'success',
+      message: '删除成功',
+    });
+
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error("删除失败:", error);
+      ElMessage({
+        type: 'error',
+        message: '删除失败，请稍后再试',
+      });
+    } else {
+      ElMessage({
+        type: 'info',
+        message: '已取消删除',
+      });
+    }
+  }
 }
 </script>
 
