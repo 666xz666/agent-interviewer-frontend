@@ -362,7 +362,7 @@ const fetchUserProfile = async () => {
 const resumes = ref<ResumeListItem[]>([]);
 
 const updateResume = (row) => {
-  router.push(`/pages/ResumeEditPage/${row.resumeId}`);
+  router.push(`/resumeEdit/${row.resumeId}`);
 };
 
 const handleCreateResume = async () => {

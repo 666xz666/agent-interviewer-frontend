@@ -28,12 +28,12 @@ const routes = [
     path: '/resume',
     name: 'resume',
     component: () => import('@/pages/ResumePage.vue')
+  },
+  {
+    path: '/resumeEdit/:id',
+    name: 'resumeEdit',
+    component: () => import('@/pages/ResumeEditPage.vue')
   }
-  // {
-  //   path: '/resumeEdit/:id',
-  //   name: 'resumeEdit',
-  //   component: () => import('@/pages/ResumeEditPage.vue')
-  // }
 ]
 
 export const router = createRouter({
