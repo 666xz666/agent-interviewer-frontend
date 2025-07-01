@@ -193,7 +193,7 @@ const handleLogin = async () => {
       if(responseData.status==200)
       {
         ElMessage.success('登录成功');
-        router.push('/about');
+        router.push('/dashboard');
       }
       else
       {
