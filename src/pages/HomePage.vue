@@ -221,7 +221,8 @@ import {
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getResume, getResumeList, createNewResume} from '@/api/resume'
+import { getResume, getResumeList, createNewResume } from '@/api/resume'
+import { getUserProfile } from '@/api/user'
 import type { ResumeData, ResumeListItem } from '@/api/resume';
 const router = useRouter()
 const activeMenu = ref('dashboard')
@@ -244,6 +245,26 @@ const activities = ref([
     timestamp: '2023-05-05'
   }
 ])
+
+
+
+
+// 获取用户信息
+const fetchUserProfile = async () => {
+  try {
+    const response = await getUserProfile();
+    if (response.data.status === 200 && response.data.success) {
+      const userData = response.data.data;
+      userName.value = userData.username || '用户';
+    } else {
+      ElMessage.error(response.data.msg || '获取用户信息失败');
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error);
+    ElMessage.error('获取用户信息失败，请稍后重试');
+  }
+};
+
 
 const resumes = ref<ResumeListItem[]>([]);
 
@@ -305,6 +326,7 @@ const handleMenuSelect = (key: string) => {
 }
 
 onMounted(() => {
+  fetchUserProfile();
   fetchResumeList();
 });
 

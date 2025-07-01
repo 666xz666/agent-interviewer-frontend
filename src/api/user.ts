@@ -1,12 +1,14 @@
 import request from './request';
 import type { AxiosResponse } from 'axios';
+import type { UserProfile } from '@/types/user';
 
-export interface UserProfile {
-  id: number;
-  name: string;
-  email: string;
+export interface UserProfileResponse {
+  success: boolean;
+  msg: string;
+  data: UserProfile;
+  status: number;
 }
 
-export function getUserProfile(): Promise<AxiosResponse<UserProfile>> {
-  return request.get<UserProfile>('/api/user/info');
+export function getUserProfile(): Promise<AxiosResponse<UserProfileResponse>> {
+  return request.get<UserProfileResponse>('/user/info');
 }

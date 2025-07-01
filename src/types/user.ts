@@ -12,9 +12,10 @@ export enum UserRole {
 }
 
 export interface UserProfile {
-  id: string;
-  realName: string;
-  university?: string;
-  major?: string;
-  graduationYear?: number;
+  userId: string,
+  username: string,
+  email: string,
+  role: string,
+  registerTime: string,
+  lastLoginTime: string,
 }
