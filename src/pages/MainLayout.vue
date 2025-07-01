@@ -54,7 +54,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ArrowLeft, ArrowRight, ArrowDown } from '@element-plus/icons-vue'
@@ -63,7 +63,7 @@ import Asider from './AsiderBar.vue'
 const router = useRouter()
 const route = useRoute()
 const isCollapse = ref(false)
-const userName = ref('管理员')
+const userName = ref('游客')
 const userAvatar = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png')
 
 const toggleCollapse = () => {

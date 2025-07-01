@@ -415,7 +415,7 @@ const startCamera = async () => {
       video: true,
       audio: true, // 同时请求麦克风权限
     });
-
+    isCameraReady.value = true;
     if (videoRef.value) {
       videoRef.value.srcObject = mediaStream;
       isCameraReady.value = true;

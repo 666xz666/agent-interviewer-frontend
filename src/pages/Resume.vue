@@ -34,7 +34,7 @@
         </el-table-column>
         <el-table-column prop="originalFileName" label="文件名" />
         <el-table-column prop="createdAt" label="上传日期" />
-        <el-table-column label="操作" width="180">
+        <el-table-column label="操作" width="200">
           <template #default="scope">
             <el-button size="small" type="primary" @click="updateResume(scope.row)">编辑</el-button>
             <el-button size="small" @click="viewResume(scope.row)">查看</el-button>
@@ -101,11 +101,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Plus, UploadFilled } from '@element-plus/icons-vue'
 import { getResume, getResumeList, createNewResume } from '@/api/resume'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ResumeData, ResumeListItem } from '@/api/resume';
-
+import axios from 'axios'
+const router = useRouter()
 const resumes = ref<ResumeListItem[]>([])
 const resumeJsonData = ref<ResumeData | null>(null)
 const isDialogVisible = ref(false)
@@ -190,32 +192,32 @@ const deleteResume = async (row) => {
         cancelButtonText: '取消',
         type: 'warning',
       }
-    )
+    );
 
     await axios.delete('/api/resume/delete', {
       params: {
         resumeId: row.resumeId
       }
-    })
-    resumes.value = resumes.value.filter(item => item.resumeId !== row.resumeId)
+    });
+    resumes.value = resumes.value.filter(item => item.resumeId !== row.resumeId);
 
     ElMessage({
       type: 'success',
       message: '删除成功',
-    })
+    });
 
   } catch (error) {
     if (error !== 'cancel') {
-      console.error("删除失败:", error)
+      console.error("删除失败:", error);
       ElMessage({
         type: 'error',
         message: '删除失败，请稍后再试',
-      })
+      });
     } else {
       ElMessage({
         type: 'info',
         message: '已取消删除',
-      })
+      });
     }
   }
 }

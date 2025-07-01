@@ -79,10 +79,12 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Upload, VideoCamera, TrendCharts } from '@element-plus/icons-vue'
+import { getUserProfile } from '@/api/user'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userName = ref('游客')
@@ -93,20 +95,42 @@ const scoreValue = ref(72)
 const activities = ref([
   {
     content: '完成了模拟产品经理面试',
-    timestamp: '2023-05-15',
+    timestamp: '2025-06-25',
     type: 'success'
   },
   {
     content: '上传了最新简历',
-    timestamp: '2023-05-10',
+    timestamp: '2025-06-10',
     type: 'primary'
   },
   {
     content: '查看了能力分析报告',
-    timestamp: '2023-05-05',
+    timestamp: '2025-06-10',
     type: 'info'
   }
 ])
+
+// 获取用户信息
+const fetchUserProfile = async () => {
+  try {
+    const response = await getUserProfile();
+    if (response.data.status === 200 && response.data.success) {
+      const userData = response.data.data;
+      userName.value = userData.username || '用户';
+    } else {
+      ElMessage.error(response.data.msg || '获取用户信息失败');
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error);
+    ElMessage.error('获取用户信息失败，请稍后重试');
+  }
+};
+
+onMounted(() => {
+  fetchUserProfile();
+});
+
+
 </script>
 
 <style scoped>

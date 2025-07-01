@@ -3,8 +3,8 @@
     <!-- 左侧导航栏 -->
     <div class="sidebar" :class="{ 'collapsed': isCollapse }">
       <div class="logo-area">
-        <h2 v-show="!isCollapse">控制面板</h2>
-        <h2 v-show="isCollapse">智</h2>
+        <h2 v-show="!isCollapse">智能面试系统</h2>
+        <h2 v-show="isCollapse">智能</h2>
       </div>
       <Asider :is-collapse="isCollapse" />
     </div>
@@ -56,16 +56,18 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
+<script setup lang = "ts">
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ArrowLeft, ArrowRight, ArrowDown } from '@element-plus/icons-vue'
+import { getUserProfile} from '@/api/user'
 import Asider from './AsiderBar.vue'
+import { ElAvatar, ElButton, ElDropdown, ElDropdownItem, ElDropdownMenu, ElIcon, ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
 const isCollapse = ref(false)
-const userName = ref('管理员')
+const userName = ref('游客')
 const userAvatar = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png')
 
 const toggleCollapse = () => {
@@ -87,6 +89,26 @@ const getPageTitle = computed(() => {
 const handleLogout = () => {
   router.push('/login')
 }
+
+// 获取用户信息
+const fetchUserProfile = async () => {
+  try {
+    const response = await getUserProfile();
+    if (response.data.status === 200 && response.data.success) {
+      const userData = response.data.data;
+      userName.value = userData.username || '用户';
+    } else {
+      ElMessage.error(response.data.msg || '获取用户信息失败');
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error);
+    ElMessage.error('获取用户信息失败，请稍后重试');
+  }
+};
+
+onMounted(() => {
+  fetchUserProfile();
+});
 </script>
 
 <style scoped>
