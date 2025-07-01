@@ -6,36 +6,38 @@
         <h2>智能面试系统</h2>
       </div>
       <el-menu
-        active-text-color="#ffd04b"
-        background-color="#545c64"
+        active-text-color="#3e8ef7"
+        background-color="#f5f7fa"
         class="el-menu-vertical"
         default-active="dashboard"
-        text-color="#fff"
+        text-color="#606266"
         @select="handleMenuSelect"
+        :collapse="isCollapse"
+        :collapse-transition="false"
       >
         <el-menu-item index="dashboard">
           <el-icon><House /></el-icon>
-          <span>控制面板</span>
+          <template #title>控制面板</template>
         </el-menu-item>
         <el-menu-item index="resume">
           <el-icon><Document /></el-icon>
-          <span>简历管理</span>
+          <template #title>简历管理</template>
         </el-menu-item>
         <el-menu-item index="interview">
           <el-icon><ChatLineRound /></el-icon>
-          <span>模拟面试</span>
+          <template #title>模拟面试</template>
         </el-menu-item>
         <el-menu-item index="history">
           <el-icon><DataLine /></el-icon>
-          <span>面试历史</span>
+          <template #title>面试历史</template>
         </el-menu-item>
         <el-menu-item index="analysis">
           <el-icon><PieChart /></el-icon>
-          <span>能力分析</span>
+          <template #title>能力分析</template>
         </el-menu-item>
         <el-menu-item index="settings">
           <el-icon><Setting /></el-icon>
-          <span>系统设置</span>
+          <template #title>系统设置</template>
         </el-menu-item>
       </el-menu>
     </div>
@@ -43,10 +45,29 @@
     <!-- 主内容区域 -->
     <div class="main-content">
       <div class="header">
+        <div class="header-left">
+          <el-button
+            type="text"
+            @click="isCollapse = !isCollapse"
+            v-if="!isCollapse"
+            class="menu-toggle"
+          >
+            <el-icon><ArrowLeft /></el-icon>
+          </el-button>
+          <el-button
+            type="text"
+            @click="isCollapse = !isCollapse"
+            v-else
+            class="menu-toggle"
+          >
+            <el-icon><ArrowRight /></el-icon>
+          </el-button>
+          <h2 class="page-title">{{ getPageTitle }}</h2>
+        </div>
         <div class="user-info">
           <el-avatar :size="40" :src="userAvatar" />
           <span class="username">{{ userName }}</span>
-          <el-dropdown>
+          <el-dropdown trigger="click">
             <el-icon style="margin-left: 8px; cursor: pointer"><ArrowDown /></el-icon>
             <template #dropdown>
               <el-dropdown-menu>
@@ -61,26 +82,66 @@
       <div class="content-area">
         <!-- 动态内容区域 -->
         <div v-if="activeMenu === 'dashboard'" class="dashboard">
-          <h2>欢迎回来, {{ userName }}</h2>
-          <p class="welcome-text">智能面试系统为您提供专业的模拟面试和能力分析服务</p>
+          <div class="welcome-card">
+            <h2>欢迎回来, {{ userName }}</h2>
+            <p class="welcome-text">智能面试系统为您提供专业的模拟面试和能力分析服务</p>
+          </div>
 
           <div class="quick-actions">
             <el-card shadow="hover" class="action-card" @click="handleMenuSelect('resume')">
-              <el-icon size="40"><Upload /></el-icon>
+              <div class="card-icon bg-primary">
+                <el-icon size="40"><Upload /></el-icon>
+              </div>
               <h3>上传简历</h3>
               <p>上传或更新您的简历</p>
             </el-card>
 
             <el-card shadow="hover" class="action-card" @click="handleMenuSelect('interview')">
-              <el-icon size="40"><VideoCamera /></el-icon>
+              <div class="card-icon bg-secondary">
+                <el-icon size="40"><VideoCamera /></el-icon>
+              </div>
               <h3>开始面试</h3>
               <p>开始新的模拟面试</p>
             </el-card>
 
             <el-card shadow="hover" class="action-card" @click="handleMenuSelect('analysis')">
-              <el-icon size="40"><TrendCharts /></el-icon>
+              <div class="card-icon bg-tertiary">
+                <el-icon size="40"><TrendCharts /></el-icon>
+              </div>
               <h3>查看分析</h3>
               <p>查看能力分析报告</p>
+            </el-card>
+          </div>
+
+          <div class="data-cards">
+            <el-card class="data-card">
+              <div class="card-header">
+                <h3>面试次数</h3>
+                <div class="card-value">{{ interviewCount }}</div>
+              </div>
+              <div class="card-progress">
+                <el-progress :percentage="65" status="primary"></el-progress>
+              </div>
+            </el-card>
+            
+            <el-card class="data-card">
+              <div class="card-header">
+                <h3>简历数量</h3>
+                <div class="card-value">{{ resumeCount }}</div>
+              </div>
+              <div class="card-progress">
+                <el-progress :percentage="80" status="success"></el-progress>
+              </div>
+            </el-card>
+            
+            <el-card class="data-card">
+              <div class="card-header">
+                <h3>能力评分</h3>
+                <div class="card-value">{{ scoreValue }}/100</div>
+              </div>
+              <div class="card-progress">
+                <el-progress :percentage="72" status="warning"></el-progress>
+              </div>
             </el-card>
           </div>
 
@@ -91,6 +152,7 @@
                 v-for="(activity, index) in activities"
                 :key="index"
                 :timestamp="activity.timestamp"
+                :type="activity.type || ''"
               >
                 {{ activity.content }}
               </el-timeline-item>
@@ -101,7 +163,7 @@
         <div v-if="activeMenu === 'resume'" class="resume-management">
           <div class="header-bar">
             <h2>简历管理</h2>
-            <el-button type="primary" @click="handleCreateResume">
+            <el-button type="primary" @click="handleCreateResume" class="btn-create">
               <el-icon><Plus /></el-icon>
               创建新简历
             </el-button>
@@ -133,9 +195,9 @@
                 </el-table-column>
                 <el-table-column prop="originalFileName" label="文件名" />
                 <el-table-column prop="createdAt" label="上传日期" />
-                <el-table-column label="操作">
+                <el-table-column label="操作" width="180">
                   <template #default="scope">
-                    <el-button size="small" @click="updateResume(scope.row)">编辑</el-button>
+                    <el-button size="small" type="primary" @click="updateResume(scope.row)">编辑</el-button>
                     <el-button size="small" @click="viewResume(scope.row)">查看</el-button>
                     <el-button size="small" type="danger" @click="deleteResume(scope.row)">删除</el-button>
                   </template>
@@ -147,40 +209,50 @@
               v-model="isDialogVisible"
               :title="`简历详情: ${resumeJsonData.originalFileName}`"
               width="70%"
+              custom-class="resume-dialog"
             >
               <div class="resume-content">
                 <h3>基本信息</h3>
-                <p><strong>姓名:</strong> {{ resumeJsonData.baseInfo.lastName }}{{ resumeJsonData.baseInfo.firstName }}</p>
-                <p><strong>性别:</strong> {{ resumeJsonData.baseInfo.gender }}</p>
-                <p><strong>年龄:</strong> {{ resumeJsonData.baseInfo.age }}</p>
-                <p><strong>电话:</strong> {{ resumeJsonData.baseInfo.phone }}</p>
-                <p><strong>邮箱:</strong> {{ resumeJsonData.baseInfo.email }}</p>
-                <p><strong>住址:</strong> {{ resumeJsonData.baseInfo.location }}</p>
+                <div class="info-row">
+                  <div class="info-col">
+                    <p><strong>姓名:</strong> {{ resumeJsonData.baseInfo.lastName }}{{ resumeJsonData.baseInfo.firstName }}</p>
+                    <p><strong>性别:</strong> {{ resumeJsonData.baseInfo.gender }}</p>
+                    <p><strong>年龄:</strong> {{ resumeJsonData.baseInfo.age }}</p>
+                  </div>
+                  <div class="info-col">
+                    <p><strong>电话:</strong> {{ resumeJsonData.baseInfo.phone }}</p>
+                    <p><strong>邮箱:</strong> {{ resumeJsonData.baseInfo.email }}</p>
+                    <p><strong>住址:</strong> {{ resumeJsonData.baseInfo.location }}</p>
+                  </div>
+                </div>
 
                 <el-divider />
 
                 <h3>教育背景</h3>
                 <div v-for="(edu, index) in resumeJsonData.educationList" :key="index" class="section-item">
-                  <p><strong>学校:</strong> {{ edu.school }}</p>
-                  <p><strong>学位:</strong> {{ edu.degree }}</p>
+                  <div class="edu-header">
+                    <h4>{{ edu.school }} - {{ edu.degree }}</h4>
+                    <span>{{ edu.startDate }} 至 {{ edu.endDate }}</span>
+                  </div>
                   <p><strong>专业:</strong> {{ edu.major }}</p>
-                  <p><strong>时间:</strong> {{ edu.startDate }} 至 {{ edu.endDate }}</p>
                 </div>
 
                 <el-divider />
 
                 <h3>工作经历</h3>
                 <div v-for="(work, index) in resumeJsonData.workExperienceList" :key="index" class="section-item">
-                  <p><strong>公司:</strong> {{ work.company }}</p>
-                  <p><strong>职位:</strong> {{ work.position }}</p>
+                  <div class="work-header">
+                    <h4>{{ work.company }} - {{ work.position }}</h4>
+                    <span>{{ work.startDate }} 至 {{ work.endDate }}</span>
+                  </div>
                   <p><strong>项目描述:</strong> {{ work.description }}</p>
-                  <p><strong>时间:</strong> {{ work.startDate }} 至 {{ work.endDate }}</p>
-                  <p style="white-space: pre-wrap;"><strong>职责:</strong> {{ work.description }}</p>
+                  <p style="white-space: pre-wrap;"><strong>职责:</strong> {{ work.responsibilities }}</p>
                 </div>
               </div>
 
               <template #footer>
                 <div class="dialog-footer">
+                  <el-button @click="downloadResume(resumeJsonData)">下载简历</el-button>
                   <el-button type="primary" @click="isDialogVisible = false">关闭</el-button>
                 </div>
               </template>
@@ -203,7 +275,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import {
   House,
   Document,
@@ -216,7 +288,9 @@ import {
   VideoCamera,
   TrendCharts,
   Plus,
-  UploadFilled
+  UploadFilled,
+  ArrowLeft,
+  ArrowRight
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
@@ -230,24 +304,43 @@ const resumeJsonData = ref<ResumeData | null>(null);
 const isDialogVisible = ref(false);
 const userName = ref('张三')
 const userAvatar = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png')
+const isCollapse = ref(false);
+
+// 模拟数据
+const interviewCount = ref(5);
+const resumeCount = ref(3);
+const scoreValue = ref(72);
 
 const activities = ref([
   {
     content: '完成了模拟产品经理面试',
-    timestamp: '2023-05-15'
+    timestamp: '2023-05-15',
+    type: 'success'
   },
   {
     content: '上传了最新简历',
-    timestamp: '2023-05-10'
+    timestamp: '2023-05-10',
+    type: 'primary'
   },
   {
     content: '查看了能力分析报告',
-    timestamp: '2023-05-05'
+    timestamp: '2023-05-05',
+    type: 'info'
   }
 ])
 
-
-
+// 计算页面标题
+const getPageTitle = computed(() => {
+  const titleMap = {
+    'dashboard': '控制面板',
+    'resume': '简历管理',
+    'interview': '模拟面试',
+    'history': '面试历史',
+    'analysis': '能力分析',
+    'settings': '系统设置'
+  };
+  return titleMap[activeMenu.value] || '智能面试系统';
+});
 
 // 获取用户信息
 const fetchUserProfile = async () => {
@@ -351,12 +444,6 @@ const viewResume = async (resume: any) => {
     const responseData = response.data;
     if(responseData.status == 200)
     {
-      ElMessage.success('简历加载成功！');
-      resumeJsonData.value = responseData;
-      isDialogVisible.value = true;
-    }
-    else
-    {
       ElMessage.error(responseData.msg || '简历加载失败，请稍后重试');
     }
   } catch (error) {
@@ -403,6 +490,15 @@ const deleteResume = async (row) => {
     }
   }
 }
+
+// 下载简历功能
+const downloadResume = (resumeData: ResumeData) => {
+  // 模拟下载功能
+  ElMessage.success('简历下载功能开发中...');
+  // 实际项目中可调用API下载简历
+  // const url = `/api/resume/download/${resumeData.id}`;
+  // window.open(url);
+}
 </script>
 
 <script lang="ts">
@@ -412,33 +508,18 @@ export default {
 </script>
 
 <style scoped>
-.header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.json-viewer {
-  background-color: #f4f4f5;
-  border-radius: 4px;
-  padding: 16px;
-  overflow-x: auto;
-  line-height: 1.5;
-  font-family: 'Courier New', Courier, monospace;
-}
-/* === 禁止所有滚动 === */
-html, body, #app, .main-container {
-  overflow: hidden !important;
-  height: 100% !important;
-  width: 100% !important;
-  position: fixed !important;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+/* === 全局样式重置 === */
+* {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+}
+
+body, html, #app {
+  height: 100%;
+  width: 100%;
+  background-color: #f5f7fa;
 }
 
 /* === 整体布局 === */
@@ -449,31 +530,72 @@ html, body, #app, .main-container {
   overflow: hidden;
 }
 
-/* === 侧边栏 - 固定高度，不滚动 === */
+/* === 侧边栏样式 === */
 .sidebar {
   width: 260px;
-  background-color: #545c64;
-  color: white;
+  background-color: #ffffff;
+  color: #606266;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  transition: width 0.3s ease;
+  position: relative;
+  z-index: 100;
+}
+
+.sidebar.collapsed {
+  width: 64px;
 }
 
 .logo-area {
   padding: 20px;
   text-align: center;
-  border-bottom: 1px solid #434a50;
+  border-bottom: 1px solid #ebeef5;
   flex-shrink: 0;
+}
+
+.logo-area h2 {
+  color: #303133;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .el-menu-vertical {
   border-right: none;
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  background-color: transparent;
 }
 
-/* === 主内容区域 - 固定高度，不滚动 === */
+.el-menu-item {
+  height: 50px;
+  line-height: 50px;
+  padding: 0 20px;
+  transition: all 0.3s;
+}
+
+.el-menu-item:hover {
+  background-color: #f5f7fa;
+}
+
+.el-menu-item.is-active {
+  background-color: #eef2ff;
+  color: #3e8ef7;
+}
+
+.el-menu-item.is-active .el-icon {
+  color: #3e8ef7;
+}
+
+.el-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+/* === 主内容区域样式 === */
 .main-content {
   flex: 1;
   display: flex;
@@ -482,16 +604,34 @@ html, body, #app, .main-container {
   overflow: hidden;
 }
 
-/* === 顶部导航栏 - 固定高度 === */
+/* === 顶部导航栏样式 === */
 .header {
-  padding: 15px 20px;
-  background-color: #f5f7fa;
+  padding: 0 20px;
+  background-color: #ffffff;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
   height: 60px;
   flex-shrink: 0;
+  position: relative;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.menu-toggle {
+  margin-right: 20px;
+  font-size: 16px;
+  color: #606266;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .user-info {
@@ -502,112 +642,310 @@ html, body, #app, .main-container {
 
 .username {
   font-weight: 500;
+  color: #303133;
 }
 
-/* === 内容区域 - 固定高度，不滚动 === */
+/* === 内容区域样式 === */
 .content-area {
   padding: 20px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
   height: calc(100vh - 60px); /* 减去header高度 */
+  background-color: #f5f7fa;
 }
 
 /* === 控制面板样式 === */
 .dashboard {
   display: flex;
   flex-direction: column;
+  gap: 20px;
   height: 100%;
-  overflow: hidden;
+}
+
+.welcome-card {
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 30px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.welcome-card h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 10px;
 }
 
 .welcome-text {
-  color: #666;
-  margin-bottom: 30px;
+  color: #606266;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .quick-actions {
   display: flex;
   gap: 20px;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
 .action-card {
   flex: 1;
-  min-width: 220px;
-  text-align: center;
+  min-width: 240px;
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 25px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   cursor: pointer;
-  transition: transform 0.3s;
-  box-sizing: border-box;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .action-card:hover {
   transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+
+.card-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+  color: #ffffff;
+}
+
+.bg-primary {
+  background-color: #409EFF;
+}
+
+.bg-secondary {
+  background-color: #67C23A;
+}
+
+.bg-tertiary {
+  background-color: #E6A23C;
 }
 
 .action-card h3 {
-  margin: 10px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 10px;
 }
 
 .action-card p {
-  color: #666;
+  color: #606266;
   font-size: 14px;
+  line-height: 1.5;
+}
+
+.data-cards {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.data-card {
+  flex: 1;
+  min-width: 240px;
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.card-header h3 {
+  font-size: 16px;
+  font-weight: 500;
+  color: #606266;
+}
+
+.card-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.card-progress {
+  margin-top: auto;
 }
 
 .recent-activities {
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+}
+
+.recent-activities h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 20px;
 }
 
 .fixed-timeline {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 /* === 简历管理样式 === */
 .resume-management {
   display: flex;
   flex-direction: column;
+  gap: 20px;
   height: 100%;
-  overflow: hidden;
+}
+
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header-bar h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.btn-create {
+  background-color: #409EFF;
+  border-color: #409EFF;
+  color: #ffffff;
+  padding: 0 20px;
+  height: 40px;
+  line-height: 40px;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.btn-create:hover {
+  background-color: #66b1ff;
+  border-color: #66b1ff;
 }
 
 .fixed-upload {
-  margin: 30px 0;
-  flex-shrink: 0;
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 30px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .resume-list {
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+}
+
+.resume-list h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 20px;
 }
 
 .fixed-table {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
-/* === 所有内容区域 === */
-.dashboard, .resume-management, .interview-section, .history-section {
-  height: 100%;
+/* === 简历详情弹窗样式 === */
+.resume-dialog {
+  .el-dialog__header {
+    background-color: #f5f7fa;
+    padding: 20px;
+    border-bottom: 1px solid #ebeef5;
+  }
+  
+  .el-dialog__title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #303133;
+  }
+  
+  .el-dialog__body {
+    padding: 30px;
+  }
+}
+
+.resume-content {
+  color: #606266;
+}
+
+.resume-content h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 20px;
+}
+
+.info-row {
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  gap: 30px;
+  margin-bottom: 20px;
+}
+
+.info-col {
+  flex: 1;
+}
+
+.section-item {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px dashed #ebeef5;
+}
+
+.edu-header, .work-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.edu-header h4, .work-header h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
 }
 
 /* === 响应式设计 === */
-@media (max-width: 992px) {
-  .quick-actions {
+@media (max-width: 1200px) {
+  .quick-actions, .data-cards {
     flex-direction: column;
   }
-
-  .action-card {
+  
+  .action-card, .data-card {
     width: 100%;
   }
 }
@@ -617,36 +955,33 @@ html, body, #app, .main-container {
     width: 100%;
     height: auto;
     position: relative;
+    z-index: 1000;
   }
-
+  
   .main-content {
-    height: calc(100vh - 60px); /* 减去导航栏高度 */
+    height: calc(100vh - 60px); /* 减去header高度 */
   }
-
+  
   .content-area {
     padding: 15px;
     height: calc(100vh - 120px); /* 减去header和导航栏高度 */
   }
-
+  
   .header {
-    padding: 10px 15px;
+    padding: 0 15px;
   }
-
-  .el-menu-vertical {
-    width: 100%;
+  
+  .welcome-card {
+    padding: 20px;
   }
-
-  .dashboard h2 {
-    font-size: 1.5rem;
+  
+  .welcome-card h2 {
+    font-size: 20px;
   }
-
-  .action-card {
-    min-width: 100%;
+  
+  .info-row {
+    flex-direction: column;
+    gap: 10px;
   }
-}
-
-/* === 防止内容溢出 === */
-* {
-  box-sizing: border-box;
 }
 </style>
