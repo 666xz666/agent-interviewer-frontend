@@ -123,7 +123,7 @@
                 <el-progress :percentage="65" status="primary"></el-progress>
               </div>
             </el-card>
-            
+
             <el-card class="data-card">
               <div class="card-header">
                 <h3>简历数量</h3>
@@ -133,7 +133,7 @@
                 <el-progress :percentage="80" status="success"></el-progress>
               </div>
             </el-card>
-            
+
             <el-card class="data-card">
               <div class="card-header">
                 <h3>能力评分</h3>
@@ -302,7 +302,7 @@ const router = useRouter()
 const activeMenu = ref('dashboard')
 const resumeJsonData = ref<ResumeData | null>(null);
 const isDialogVisible = ref(false);
-const userName = ref('张三')
+const userName = ref('游客')
 const userAvatar = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png')
 const isCollapse = ref(false);
 
@@ -528,6 +528,13 @@ body, html, #app {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 /* === 侧边栏样式 === */
@@ -887,13 +894,13 @@ body, html, #app {
     padding: 20px;
     border-bottom: 1px solid #ebeef5;
   }
-  
+
   .el-dialog__title {
     font-size: 18px;
     font-weight: 600;
     color: #303133;
   }
-  
+
   .el-dialog__body {
     padding: 30px;
   }
@@ -944,7 +951,7 @@ body, html, #app {
   .quick-actions, .data-cards {
     flex-direction: column;
   }
-  
+
   .action-card, .data-card {
     width: 100%;
   }
@@ -957,28 +964,28 @@ body, html, #app {
     position: relative;
     z-index: 1000;
   }
-  
+
   .main-content {
     height: calc(100vh - 60px); /* 减去header高度 */
   }
-  
+
   .content-area {
     padding: 15px;
     height: calc(100vh - 120px); /* 减去header和导航栏高度 */
   }
-  
+
   .header {
     padding: 0 15px;
   }
-  
+
   .welcome-card {
     padding: 20px;
   }
-  
+
   .welcome-card h2 {
     font-size: 20px;
   }
-  
+
   .info-row {
     flex-direction: column;
     gap: 10px;
