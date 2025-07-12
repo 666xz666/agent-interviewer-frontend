@@ -19,7 +19,7 @@ const routes = [
       {
         path: 'dashboard',
         name: 'Dashboard',
-        component: () => import('@/pages/Dashboard.vue')
+        component: () => import('@/pages/DashboardPage.vue')
       },
       {
         path: '/resume',

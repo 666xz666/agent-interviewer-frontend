@@ -196,6 +196,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   margin-bottom: 15px;
+  margin-left: 15px;
   color: #ffffff;
 }
 
