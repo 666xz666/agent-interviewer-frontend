@@ -42,19 +42,33 @@
           <div v-for="(message, index) in chatHistory" :key="index" class="message-wrapper">
             <div :class="['message', message.role]">
               <div class="avatar">
-                <span>{{ message.role === 'user' ? '我' : 'AI' }}</span>
+                <img v-if="message.role === 'user'" src="@/assets/images/user-avatar.png" alt="用户">
+                <img v-else src="@/assets/images/ai-avatar.png" alt="AI">
               </div>
-              <div class="content">
-                <p>{{ message.content }}</p>
+              <div class="bubble">
+                <div class="content">
+                  <p>{{ message.content }}</p>
+                </div>
+                <div class="arrow"></div>
               </div>
+            </div>
+            <div class="message-time" v-if="message.time">
+              {{ message.time }}
             </div>
           </div>
 
           <div v-if="isAiThinking" class="message-wrapper">
             <div class="message assistant">
-              <div class="avatar"><span>AI</span></div>
-              <div class="content thinking">
-                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              <div class="avatar">
+                <img src="@/assets/images/ai-avatar.png" alt="AI">
+              </div>
+              <div class="bubble">
+                <div class="content thinking">
+                  <span class="dot"></span>
+                  <span class="dot"></span>
+                  <span class="dot"></span>
+                </div>
+                <div class="arrow"></div>
               </div>
             </div>
           </div>
@@ -80,6 +94,7 @@ import { analyzeExpression } from '@/api/interview'
 import { createRecorder } from '@/pages/recoder';
 import { getWebSocketUrl, arrayBufferToBase64, processRecognitionResult, resetRecognitionResult } from '@/pages/speech';
 import { Mic } from '@element-plus/icons-vue'
+
 
 // 状态变量
 const isInterviewing = ref(false)
@@ -155,7 +170,7 @@ const sendStartParams = () => {
 
   const params = {
     common: {
-      app_id: "your-app-id", // 替换为你的APPID
+      app_id: "a006ee60", // 替换为你的APPID
     },
     business: {
       language: "zh_cn",
@@ -418,6 +433,7 @@ onUnmounted(() => {
   gap: 24px;
   width: 100%;
   height: 100%;
+  min-height: 600px;
 }
 
 .video-panel {
@@ -435,7 +451,12 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--el-border-color);
+}
+
+:deep(.el-card__header) {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--el-border-color);
 }
 
 :deep(.el-card__body) {
@@ -443,12 +464,19 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 20px;
+  padding: 0;
 }
 
 .card-header {
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
   font-weight: 600;
+}
+
+.expression-result {
+  margin-left: auto;
 }
 
 .video-wrapper {
@@ -460,6 +488,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  margin: 20px;
 }
 
 .video-feed {
@@ -473,132 +502,170 @@ onUnmounted(() => {
   color: #888;
   text-align: center;
 }
+
 .video-placeholder p {
   margin-top: 10px;
 }
 
 .controls {
-  margin-top: 20px;
+  margin: 20px;
   text-align: center;
   flex-shrink: 0;
 }
 
+/* Chat Window Styles */
 .chat-window {
   flex-grow: 1;
   overflow-y: auto;
-  padding-right: 10px;
+  padding: 16px;
+  background-color: #f5f5f5;
 }
+
 .message-wrapper {
-  margin-bottom: 20px;
-  display: flex;
+  margin-bottom: 16px;
 }
+
 .message {
   display: flex;
   gap: 12px;
-  max-width: 95%;
-  align-items: flex-start;
-}
-.message .avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
+  max-width: 85%;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: white;
-  font-weight: bold;
 }
-.message .content {
-  padding: 12px 16px;
-  border-radius: 12px;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-  line-height: 1.6;
-}
+
 .message.user {
   margin-left: auto;
   flex-direction: row-reverse;
 }
-.message.user .avatar {
-  background-color: var(--primary-color);
-}
-.message.user .content {
-  background-color: var(--primary-color-light);
-  border-radius: 12px 12px 0 12px;
-}
+
 .message.assistant {
   margin-right: auto;
 }
-.message.assistant .avatar {
-  background-color: var(--success-color);
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background-color: #eee;
 }
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bubble {
+  position: relative;
+  max-width: calc(100% - 60px);
+  min-width: 60px;
+  margin-top: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.content {
+  padding: 12px 16px;
+  border-radius: 18px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  font-size: 15px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.message.user .content {
+  background-color: #95ec69;
+  color: #000;
+  border-radius: 18px 4px 18px 18px;
+}
+
 .message.assistant .content {
-  background-color: var(--success-color-light);
-  border-radius: 12px 12px 12px 0;
+  background-color: #fff;
+  color: #000;
+  border-radius: 4px 18px 18px 18px;
+  border: 1px solid #eee;
 }
+
+/* Arrow for speech bubble */
+.arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  bottom: 12px;
+}
+
+.message.user .arrow {
+  right: -6px;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 8px solid #95ec69;
+}
+
+.message.assistant .arrow {
+  left: -6px;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 8px solid #fff;
+}
+
+/* Thinking animation */
+.content.thinking {
+  background: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 12px 16px 12px 0;
+}
+
 .content.thinking .dot {
   display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #909399;
-  margin: 0 2px;
+  background: #999;
+  margin: 0 4px;
   animation: thinking-dots 1.4s infinite ease-in-out both;
 }
+
 .content.thinking .dot:nth-child(1) { animation-delay: -0.32s; }
 .content.thinking .dot:nth-child(2) { animation-delay: -0.16s; }
+
 @keyframes thinking-dots {
   0%, 80%, 100% { transform: scale(0); }
   40% { transform: scale(1.0); }
 }
 
-.chat-input-area {
-  padding-top: 15px;
-  border-top: 1px solid var(--border-color);
-  flex-shrink: 0;
+.message-time {
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  margin: 4px 0 16px;
+  padding: 0 50px;
 }
+
+.chat-input-area {
+  padding: 12px 16px;
+  border-top: 1px solid var(--el-border-color);
+  background-color: #fff;
+}
+
 .voice-tip {
   text-align: center;
-  color: var(--text-color-secondary);
+  color: var(--el-text-color-secondary);
   font-size: 14px;
-}
-
-/* 深度选择器穿透 scoped，修改 el-tag 样式 */
-:deep(.el-tag) {
-  /* 调整背景色（换成更柔和的绿色） */
-  background-color: #a7dcf9;
-  /* 加深文字颜色 */
-  color: #333;
-  /* 增大圆角 */
-  border-radius: 8px;
-  /* 调整内边距，让标签更饱满 */
-  padding: 6px 12px;
-  /* 优化字体大小 */
-  font-size: 14px;
-  /* 去掉默认边框（如果不需要） */
-  border: none;
-}
-
-/* 针对不同表情类型的特殊处理（如“喜悦”单独改色） */
-:deep(.el-tag--success) {
-  background-color: #93f4cd;
-}
-
-.card-header {
+  margin: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-start; /* 关键：让子元素从左侧开始排列 */
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.expression-result {
-  margin-left: 300px; /* 控制与“我的视频”标题的间距，可按需改 */
+  justify-content: center;
 }
 
 .recording-icon {
-  color: #f56c6c;
+  color: var(--el-color-danger);
   margin-right: 8px;
   animation: pulse 1.5s infinite;
 }
@@ -607,5 +674,24 @@ onUnmounted(() => {
   0% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.2); opacity: 0.7; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+/* Scrollbar styling */
+.chat-window::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-window::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.chat-window::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.chat-window::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 </style>

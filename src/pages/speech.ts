@@ -6,8 +6,8 @@ let resultTextTemp = "";
 export function getWebSocketUrl(): string {
   const url = "wss://iat-api.xfyun.cn/v2/iat";
   const host = "iat-api.xfyun.cn";
-  const apiKey = "your-api-key";
-  const apiSecret = "your-api-secret";
+  const apiKey = "d98ad0cb6bfd95a28eefd794415cc48f";
+  const apiSecret = "OTdmNzliNjVlNjdmZjA1NmI4MzU1YjFj";
   const date = new Date().toUTCString();
   const algorithm = "hmac-sha256";
   const headers = "host date request-line";

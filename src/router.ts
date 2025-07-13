@@ -46,6 +46,11 @@ const routes = [
         name: 'Settings',
         component: () => import('@/pages/Settings.vue')
       },
+      {
+        path: '/resume/create',
+        name: 'ResumeCreate',
+        component: () => import('@/pages/ResumeCreate.vue')
+      }
     ]
   },
   {
@@ -64,12 +69,7 @@ const routes = [
     component: () => import('@/pages/LoginPage.vue')
   },
   {
-    path: '/resume',
-    name: 'resume',
-    component: () => import('@/pages/ResumePage.vue')
-  },
-  {
-    path: '/resumeEdit/:id',
+    path: '/resumeEdit/:resumeId',  // 保持不变，因为已经使用 :resumeId
     name: 'resumeEdit',
     component: () => import('@/pages/ResumeEditPage.vue')
   },

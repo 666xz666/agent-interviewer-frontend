@@ -4,7 +4,10 @@
       <el-card class="form-card">
         <template #header>
           <div class="card-header">
-            <span>编辑简历</span>
+            <div class="header-left">
+              <el-button @click="goBack" :icon="ArrowLeft" circle plain></el-button>
+              <span>编辑简历</span>
+            </div>
             <el-button type="primary" @click="saveChanges" :loading="isSaving">保存更新</el-button>
           </div>
         </template>
@@ -182,8 +185,10 @@ import { ref, onMounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { ElMessage, ElCard, ElForm, ElFormItem, ElInput, ElRow, ElCol, ElButton, ElDivider, ElIcon } from 'element-plus';
-import { Delete,Plus } from '@element-plus/icons-vue';
-import type { ResumeData, BasicInfo, Education, WorkExperience } from '@/api/resume'; // 确保类型定义正确
+import { Delete, Plus } from '@element-plus/icons-vue';
+import type { ResumeData, BasicInfo, Education, WorkExperience } from '@/api/resume';
+import { ArrowLeft } from '@element-plus/icons-vue';
+import { getResume, getResumeList } from '@/api/resume'
 
 // --- 通用变量 ---
 const route = useRoute();
@@ -203,40 +208,66 @@ const resumeForm = ref<ResumeData>({
   workExperienceList: []
 });
 
-onMounted(async () => {
-  const resumeId = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id;
-  if (resumeId) {
-    try {
-      const response = await axios.get(`/api/resume/info/${resumeId}`);
-      if (response.data && response.data.data) {
-        resumeForm.value = response.data.data;
-        const resumeData = response.data.data;
-        if (resumeData.educationList) {
-          resumeData.educationList.forEach((edu: any) => {
-            if (edu.startDate && edu.endDate) {
-              edu.timeRange = [new Date(edu.startDate), new Date(edu.endDate)];
-            }
-          });
-        }
-        if (resumeData.workExperienceList) {
-          resumeData.workExperienceList.forEach((work: any) => {
-            if (work.startDate && work.endDate) {
-              work.timeRange = [new Date(work.startDate), new Date(work.endDate)];
-            }
-          });
-        }
-
-        resumeForm.value = resumeData;
-      } else {
-        ElMessage.error("未找到有效的简历数据");
-      }
-    } catch (e) {
-      console.error("加载简历失败:", e);
-      ElMessage.error("加载简历失败");
+// 加载单个简历数据
+const loadResumeData = async () => {
+  loading.value = true;
+  try {
+    const resumeId = route.params.resumeId as string;
+    if (!resumeId) {
+      throw new Error('缺少简历ID');
     }
+
+    const response = await getResume(resumeId);
+    const responseData = response.data;
+
+    if (responseData.status === 200 && responseData.data) {
+      // 解析结构化数据
+      const parsedData = responseData.data.structuredData
+        ? JSON.parse(responseData.data.structuredData)
+        : {};
+
+      // 合并数据到表单
+      resumeForm.value = {
+        ...responseData.data,
+        ...parsedData,
+        baseInfo: parsedData.baseInfo || {
+          firstName: '', lastName: '', gender: '', age: 0, phone: '', email: '', location: ''
+        },
+        educationList: parsedData.educationList || [],
+        workExperienceList: parsedData.workExperienceList || []
+      };
+
+      // 处理时间范围数据
+      resumeForm.value.educationList.forEach((edu: any) => {
+        if (edu.startDate && edu.endDate) {
+          edu.timeRange = [new Date(edu.startDate), new Date(edu.endDate)];
+        } else {
+          edu.timeRange = [];
+        }
+      });
+
+      resumeForm.value.workExperienceList.forEach((work: any) => {
+        if (work.startDate && work.endDate) {
+          work.timeRange = [new Date(work.startDate), new Date(work.endDate)];
+        } else {
+          work.timeRange = [];
+        }
+      });
+    } else {
+      throw new Error(responseData.msg || '简历加载失败');
+    }
+  } catch (error) {
+    console.error('加载简历失败:', error);
+    ElMessage.error('加载简历失败: ' + (error instanceof Error ? error.message : '未知错误'));
+    router.back();
+  } finally {
+    loading.value = false;
   }
-  loading.value = false;
-});
+};
+
+const goBack = () => {
+  router.push('/resume');
+};
 
 const saveChanges = async () => {
   if (!resumeForm.value) return;
@@ -244,36 +275,48 @@ const saveChanges = async () => {
   try {
     const payload = JSON.parse(JSON.stringify(resumeForm.value));
 
+    // 处理教育经历时间
     if (payload.educationList) {
       payload.educationList.forEach((edu: any) => {
         if (Array.isArray(edu.timeRange) && edu.timeRange.length === 2) {
-          edu.startDate = edu.timeRange[0];
-          edu.endDate = edu.timeRange[1];
+          edu.startDate = edu.timeRange[0].toISOString();
+          edu.endDate = edu.timeRange[1].toISOString();
         }
-        delete edu.timeRange; // 删除临时的timeRange属性
+        delete edu.timeRange;
       });
     }
+
+    // 处理工作经历时间
     if (payload.workExperienceList) {
       payload.workExperienceList.forEach((work: any) => {
         if (Array.isArray(work.timeRange) && work.timeRange.length === 2) {
-          work.startDate = work.timeRange[0];
-          work.endDate = work.timeRange[1];
+          work.startDate = work.timeRange[0].toISOString();
+          work.endDate = work.timeRange[1].toISOString();
         }
-        delete work.timeRange; // 删除临时的timeRange属性
+        delete work.timeRange;
       });
     }
+
     await axios.post('/api/resume/update', payload);
     ElMessage.success('简历更新成功！');
     router.back();
   } catch (e) {
     console.error("更新失败:", e);
-    ElMessage.error("更新失败");
+    ElMessage.error("更新失败: " + (e instanceof Error ? e.message : '未知错误'));
+  } finally {
+    isSaving.value = false;
   }
-  isSaving.value = false;
 };
 
 const addEducation = () => {
-  resumeForm.value.educationList.push({ school: '', degree: '', major: '', startDate: '', endDate: '' });
+  resumeForm.value.educationList.push({
+    school: '',
+    degree: '',
+    major: '',
+    startDate: '',
+    endDate: '',
+    timeRange: []
+  });
 };
 
 const removeEducation = (index: number) => {
@@ -281,17 +324,25 @@ const removeEducation = (index: number) => {
 };
 
 const addWorkExperience = () => {
-    resumeForm.value.workExperienceList.push({ company: '', position: '', description: '', responsibilities: '', startDate: '', endDate: '' });
+  resumeForm.value.workExperienceList.push({
+    company: '',
+    position: '',
+    description: '',
+    responsibilities: '',
+    startDate: '',
+    endDate: '',
+    timeRange: []
+  });
 }
 
 const removeWorkExperience = (index: number) => {
-    resumeForm.value.workExperienceList.splice(index, 1);
+  resumeForm.value.workExperienceList.splice(index, 1);
 }
 
 // --- AI 助手相关逻辑 ---
 const userInput = ref('');
 const chatHistory = ref<{role: 'user' | 'assistant', content: string}[]>([
-  { role: 'assistant', content: '你好！有什么可以帮您优化这份简历的吗？可以说“帮我优化一下工作经历”' }
+  { role: 'assistant', content: '你好！有什么可以帮您优化这份简历的吗？可以说"帮我优化一下工作经历"' }
 ]);
 const isStreaming = ref(false);
 const chatWindowRef = ref<HTMLDivElement | null>(null);
@@ -363,10 +414,14 @@ const handleSendMessage = async () => {
     isStreaming.value = false;
   }
 };
+
+// 初始化加载简历数据
+onMounted(() => {
+  loadResumeData();
+});
 </script>
 
 <style scoped>
-
 .edit-page-container {
   display: flex;
   width: 100vw;
@@ -380,10 +435,9 @@ const handleSendMessage = async () => {
   left: 0;
 }
 
-
 .resume-form-container {
-  flex: 2; /* 表单占 2/3 宽度 */
-  overflow-y: auto; /* 只让表单区域内部滚动 */
+  flex: 2;
+  overflow-y: auto;
   background: #fff;
   padding: 24px;
   border-radius: 8px;
@@ -391,7 +445,7 @@ const handleSendMessage = async () => {
 }
 
 .ai-assistant-container {
-  flex: 1; /* AI助手占 1/3 宽度 */
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
@@ -415,13 +469,13 @@ const handleSendMessage = async () => {
   box-shadow: none;
 }
 
-/* AI聊天窗口样式 */
 .chat-card {
   height: 100%;
   display: flex;
   flex-direction: column;
   border: 1px solid #e5e7eb;
 }
+
 :deep(.el-card__body) {
   display: flex;
   flex-direction: column;
@@ -429,21 +483,25 @@ const handleSendMessage = async () => {
   overflow: hidden;
   padding: 0;
 }
+
 .chat-window {
   flex-grow: 1;
   overflow-y: auto;
   padding: 20px;
 }
+
 .message-wrapper {
   margin-bottom: 15px;
   display: flex;
 }
+
 .message {
   display: flex;
   gap: 10px;
   max-width: 95%;
   align-items: flex-start;
 }
+
 .message .avatar {
   width: 32px;
   height: 32px;
@@ -455,6 +513,7 @@ const handleSendMessage = async () => {
   color: white;
   font-weight: bold;
 }
+
 .message .content {
   padding: 10px 15px;
   border-radius: 12px;
@@ -462,33 +521,39 @@ const handleSendMessage = async () => {
   white-space: pre-wrap;
   line-height: 1.6;
 }
+
 .message.user {
   margin-left: auto;
   flex-direction: row-reverse;
 }
+
 .message.user .avatar {
   background-color: #409eff;
 }
+
 .message.user .content {
   background-color: #ecf5ff;
   border-radius: 12px 12px 0 12px;
 }
+
 .message.assistant {
   margin-right: auto;
 }
+
 .message.assistant .avatar {
   background-color: #67c23a;
 }
+
 .message.assistant .content {
   background-color: #f0f9eb;
   border-radius: 12px 12px 12px 0;
 }
+
 .chat-input-area {
   padding: 15px 20px;
   border-top: 1px solid #e5e7eb;
 }
 
-/* 表单区块样式 */
 .form-section {
   background-color: #f9fafb;
   padding: 15px;
@@ -497,10 +562,21 @@ const handleSendMessage = async () => {
   position: relative;
   border-radius: 4px;
 }
+
 .remove-btn {
   position: absolute;
   top: 50%;
   right: 15px;
   transform: translateY(-50%);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-left span {
+  margin-left: 8px;
 }
 </style>

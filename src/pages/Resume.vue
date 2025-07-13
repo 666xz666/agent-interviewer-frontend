@@ -2,7 +2,8 @@
   <div class="resume-management">
     <div class="header-bar">
       <h2>简历管理</h2>
-      <el-button type="primary" @click="handleCreateResume" class="btn-create">
+
+      <el-button type="primary" @click="router.push('/resume/create')" class="btn-create">
         <el-icon><Plus /></el-icon>
         创建新简历
       </el-button>
@@ -103,58 +104,33 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, UploadFilled } from '@element-plus/icons-vue'
-import { getResume, getResumeList, createNewResume } from '@/api/resume'
+import { getResume, getResumeList, createResume } from '@/api/resume'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { ResumeData, ResumeListItem } from '@/api/resume';
+import type { ResumeData, ResumeListItem, CreateResumePayload, BaseInfo, Education, WorkExperience} from '@/api/resume';
 import axios from 'axios'
 const router = useRouter()
 const resumes = ref<ResumeListItem[]>([])
 const resumeJsonData = ref<ResumeData | null>(null)
 const isDialogVisible = ref(false)
+const isLoading = ref(false) // 添加加载状态
 
 const fetchResumeList = async () => {
+  isLoading.value = true
   try {
     const response = await getResumeList()
-    const responseData = response.data
-    if(responseData.status == 200) {
-      resumes.value = responseData.data
+    console.log('API响应:', response) // 添加调试日志
+
+    // 更健壮的数据检查
+    if (response?.data?.status === 200 && Array.isArray(response.data.data)) {
+      resumes.value = response.data.data
     } else {
-      ElMessage.error(responseData.msg || '获取简历列表失败，请稍后重试')
+      throw new Error(response?.data?.msg || '无效的响应数据')
     }
   } catch (error) {
-    ElMessage.error('获取简历列表失败，请稍后重试')
-  }
-}
-
-const handleCreateResume = async () => {
-  const newIndex = resumes.value.length + 1
-  const emptyResumePayload: ResumeData = {
-    originalFileName: `新建简历 - ${newIndex}`,
-    baseInfo: {
-      firstName: '',
-      lastName: '',
-      gender: '',
-      age: 0,
-      phone: '',
-      email: '',
-      location: ''
-    },
-    educationList: [],
-    workExperienceList: []
-  }
-
-  try {
-    const response = await createNewResume(emptyResumePayload)
-    const responseData = response.data
-    if(responseData.status == 200) {
-      const newResume = responseData.data
-      resumes.value.unshift(newResume)
-      ElMessage.success('新简历创建成功！')
-    } else {
-      ElMessage.error(response.data.msg || '简历创建失败')
-    }
-  } catch (error) {
-    ElMessage.error('请求失败，请稍后重试')
+    console.error('获取简历列表失败:', error)
+    ElMessage.error(`获取简历列表失败: ${error.message}`)
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -162,25 +138,56 @@ const updateResume = (row) => {
   router.push(`/resumeEdit/${row.resumeId}`)
 }
 
-const viewResume = async (resume) => {
-  console.log('查看简历', resume)
-  if (!resume || !resume.id) {
-    ElMessage.error('无法获取简历，请检查简历内容是否为空')
-    return
+const viewResume = async (resume: ResumeListItem) => {
+  console.log('查看简历参数:', resume);
+  if (!resume?.resumeId) {
+    ElMessage.error('无法获取简历，请检查简历内容是否为空');
+    return;
   }
+
   try {
-    const response = await getResume(resume.id)
-    const responseData = response.data
-    if(responseData.status == 200) {
-      resumeJsonData.value = responseData.data
-      isDialogVisible.value = true
+    const response = await getResume(resume.resumeId);
+    const responseData = response.data;
+
+    if (responseData.status === 5901) {
+      ElMessage.error('请先登录');
+      router.push('/login');
+      return;
+    }
+
+    if (responseData.status === 200 && responseData.data) {
+      // 定义 parsedData 的类型
+      let parsedData: {
+        baseInfo?: BaseInfo;
+        educationList?: Education[];
+        workExperienceList?: WorkExperience[];
+        originalFileName?: string;
+      } = {};
+
+      try {
+        parsedData = JSON.parse(responseData.data.structuredData || '{}');
+      } catch (e) {
+        console.error('解析structuredData失败:', e);
+        ElMessage.warning('部分简历数据格式异常');
+      }
+
+      // 合并数据
+      resumeJsonData.value = {
+        ...responseData.data,
+        ...parsedData,
+        originalFileName: responseData.data.originalFileName || parsedData.originalFileName || '未知文件名'
+      };
+
+      console.log('处理后的简历数据:', resumeJsonData.value);
+      isDialogVisible.value = true;
     } else {
-      ElMessage.error(responseData.msg || '简历加载失败，请稍后重试')
+      ElMessage.error(responseData.msg || '简历加载失败');
     }
   } catch (error) {
-    ElMessage.error('请求失败，请检查网络或联系管理员')
+    console.error('查看简历失败:', error);
+    ElMessage.error('请求失败: ' + (error instanceof Error ? error.message : '未知错误'));
   }
-}
+};
 
 const deleteResume = async (row) => {
   try {
