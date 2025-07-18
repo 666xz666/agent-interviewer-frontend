@@ -22,7 +22,7 @@
         </div>
         <div class="controls">
           <el-button v-if="!isInterviewing" type="success" size="large" @click="startInterview" :icon="VideoPlay">
-            开始面试
+            创建面试
           </el-button>
           <el-button v-else type="danger" size="large" @click="endInterview" :icon="VideoPause">
             结束面试
@@ -94,9 +94,12 @@ import { analyzeExpression } from '@/api/interview'
 import { createRecorder } from '@/pages/recoder';
 import { getWebSocketUrl, arrayBufferToBase64, processRecognitionResult, resetRecognitionResult } from '@/pages/speech';
 import { Mic } from '@element-plus/icons-vue'
+import { useRouter, useRoute } from 'vue-router'
 
 
 // 状态变量
+const router = useRouter()
+const route = useRoute()
 const isInterviewing = ref(false)
 const isCameraReady = ref(false)
 const isAiThinking = ref(false)
@@ -331,35 +334,12 @@ const startCamera = async (): Promise<void> => {
     cameraStatusText.value = "无法访问摄像头，请检查权限"
     ElMessage.error("无法访问摄像头或麦克风，请检查系统设置或浏览器权限")
   }
+  if (route.query.autoStart === 'true') {
+    startInterviewProcess();
+  }
 }
 
-// 停止摄像头
-const stopCamera = (): void => {
-  mediaStream?.getTracks().forEach((track: MediaStreamTrack) => track.stop())
-  isCameraReady.value = false
-}
-
-// 滚动到底部
-const scrollToBottom = (): void => {
-  nextTick(() => {
-    if (chatWindowRef.value) {
-      chatWindowRef.value.scrollTo({
-        top: chatWindowRef.value.scrollHeight,
-        behavior: 'smooth'
-      })
-    }
-  })
-}
-
-// AI提问
-const askAiQuestion = (question: string): void => {
-  chatHistory.value.push({ role: 'assistant', content: question })
-  scrollToBottom()
-}
-
-
-// 修改后的开始面试
-const startInterview = async (): Promise<void> => {
+const startInterviewProcess = async () => {
   if (!isCameraReady.value) {
     ElMessage.warning('请先允许摄像头和麦克风权限');
     return;
@@ -394,6 +374,71 @@ const startInterview = async (): Promise<void> => {
     ElMessage.error('无法启动语音识别: ' + (error as Error).message);
   }
 };
+
+// 停止摄像头
+const stopCamera = (): void => {
+  mediaStream?.getTracks().forEach((track: MediaStreamTrack) => track.stop())
+  isCameraReady.value = false
+}
+
+// 滚动到底部
+const scrollToBottom = (): void => {
+  nextTick(() => {
+    if (chatWindowRef.value) {
+      chatWindowRef.value.scrollTo({
+        top: chatWindowRef.value.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
+  })
+}
+
+// AI提问
+const askAiQuestion = (question: string): void => {
+  chatHistory.value.push({ role: 'assistant', content: question })
+  scrollToBottom()
+}
+
+
+// // 修改后的开始面试
+// const startInterview = async (): Promise<void> => {
+//   if (!isCameraReady.value) {
+//     ElMessage.warning('请先允许摄像头和麦克风权限');
+//     return;
+//   }
+
+//   try {
+//     // 检查麦克风权限
+//     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+//     stream.getTracks().forEach(track => track.stop());
+
+//     isInterviewing.value = true;
+//     chatHistory.value = [];
+//     expressionResult.value = null;
+//     resetRecognitionResult();
+
+//     // 初始化语音识别
+//     initSpeechRecognition();
+
+//     // 开始录音
+//     recorderControls?.recStart();
+//     isRecording.value = true;
+
+//     ElMessage.success('面试开始！');
+
+//     // 10秒后执行表情识别
+//     setTimeout(captureAndAnalyzeOnce, 10000);
+
+//     // AI开场提问
+//     setTimeout(() => askAiQuestion("你好，欢迎参加本次模拟面试。请先做一个简单的自我介绍吧。"), 500);
+
+//   } catch (error) {
+//     ElMessage.error('无法启动语音识别: ' + (error as Error).message);
+//   }
+// };
+const startInterview = () => {
+  router.push('/interview/create')
+}
 
 // 修改后的结束面试
 const endInterview = (): void => {

@@ -34,7 +34,7 @@ const routes = [
       {
         path: '/history',
         name: 'History',
-        component: () => import('@/pages/History.vue')
+        component: () => import('@/pages/HistoryPage.vue')
       },
       {
         path: '/analysis',
@@ -50,14 +50,19 @@ const routes = [
         path: '/resume/create',
         name: 'ResumeCreate',
         component: () => import('@/pages/ResumeCreate.vue')
+      },
+      {
+        path: '/interview/create',
+        name: 'CreateInterview',
+        component: () => import('@/pages/CreateInterview.vue')
       }
     ]
   },
-  {
-    path: '/about',
-    name: 'about',
-    component: () => import('@/pages/HomePage.vue')
-  },
+  // {
+  //   path: '/about',
+  //   name: 'about',
+  //   component: () => import('@/pages/HomePage.vue')
+  // },
   // {
   //   path: '/interview',
   //   name: 'interview',
