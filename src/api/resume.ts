@@ -74,6 +74,27 @@ export interface ResumeListItem {
   createdAt: string;
 }
 
+export interface UpdateResumePayload {
+  resumeId: number;
+  originalFileName: string;
+  baseInfo: BaseInfo;
+  educationList: Education[];
+  workExperienceList: WorkExperience[];
+  projectExperienceList?: ProjectExperience[];
+  skills?: Skill[];
+  certificates?: Certificate[];
+  selfEvaluation?: string;
+  jobIntention?: string;
+}
+
+// 更新简历响应
+export interface UpdateResumeResponse {
+  msg: string;
+  success: boolean;
+  data: ResumeData | null;
+  status: number;
+}
+
 // API 响应类型
 export interface ApiResponse<T> {
   msg: string;
@@ -144,4 +165,9 @@ export async function getResumeList(): Promise<AxiosResponse<GetResumeListRespon
 
 export async function createResume(payload: CreateResumePayload): Promise<AxiosResponse<CreateResumeResponse>> {
   return request.post<CreateResumeResponse>('/resume/create', payload)
+}
+
+// 添加更新简历接口
+export async function updateResume(payload: UpdateResumePayload): Promise<AxiosResponse<UpdateResumeResponse>> {
+  return request.post<UpdateResumeResponse>('/resume/update', payload);
 }

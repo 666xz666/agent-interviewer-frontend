@@ -188,7 +188,7 @@ import { ElMessage, ElCard, ElForm, ElFormItem, ElInput, ElRow, ElCol, ElButton,
 import { Delete, Plus } from '@element-plus/icons-vue';
 import type { ResumeData, BasicInfo, Education, WorkExperience } from '@/api/resume';
 import { ArrowLeft } from '@element-plus/icons-vue';
-import { getResume, getResumeList } from '@/api/resume'
+import { getResume, getResumeList, updateResume } from '@/api/resume'
 
 // --- 通用变量 ---
 const route = useRoute();
@@ -213,9 +213,7 @@ const loadResumeData = async () => {
   loading.value = true;
   try {
     const resumeId = route.params.resumeId as string;
-    if (!resumeId) {
-      throw new Error('缺少简历ID');
-    }
+    if (!resumeId) throw new Error('缺少简历ID');
 
     const response = await getResume(resumeId);
     const responseData = response.data;
@@ -226,10 +224,11 @@ const loadResumeData = async () => {
         ? JSON.parse(responseData.data.structuredData)
         : {};
 
-      // 合并数据到表单
+      // 设置表单数据
       resumeForm.value = {
-        ...responseData.data,
-        ...parsedData,
+        resumeId: responseData.data.resumeId,
+        originalFileName: responseData.data.originalFileName,
+        createdAt: responseData.data.createdAt,
         baseInfo: parsedData.baseInfo || {
           firstName: '', lastName: '', gender: '', age: 0, phone: '', email: '', location: ''
         },
@@ -240,7 +239,7 @@ const loadResumeData = async () => {
       // 处理时间范围数据
       resumeForm.value.educationList.forEach((edu: any) => {
         if (edu.startDate && edu.endDate) {
-          edu.timeRange = [new Date(edu.startDate), new Date(edu.endDate)];
+          edu.timeRange = [new Date(edu.startDate + '-01'), new Date(edu.endDate + '-01')];
         } else {
           edu.timeRange = [];
         }
@@ -248,7 +247,7 @@ const loadResumeData = async () => {
 
       resumeForm.value.workExperienceList.forEach((work: any) => {
         if (work.startDate && work.endDate) {
-          work.timeRange = [new Date(work.startDate), new Date(work.endDate)];
+          work.timeRange = [new Date(work.startDate + '-01'), new Date(work.endDate + '-01')];
         } else {
           work.timeRange = [];
         }
@@ -270,43 +269,75 @@ const goBack = () => {
 };
 
 const saveChanges = async () => {
-  if (!resumeForm.value) return;
+  if (!resumeForm.value || !resumeForm.value.resumeId) {
+    ElMessage.warning('简历ID不存在');
+    return;
+  }
+
   isSaving.value = true;
   try {
-    const payload = JSON.parse(JSON.stringify(resumeForm.value));
+    // 按照接口文档格式准备数据
+    const payload = {
+      resumeId: resumeForm.value.resumeId,
+      originalFileName: resumeForm.value.originalFileName,
+      baseInfo: {
+        firstName: resumeForm.value.baseInfo.firstName,
+        lastName: resumeForm.value.baseInfo.lastName,
+        gender: resumeForm.value.baseInfo.gender,
+        age: resumeForm.value.baseInfo.age,
+        phone: resumeForm.value.baseInfo.phone,
+        email: resumeForm.value.baseInfo.email,
+        location: resumeForm.value.baseInfo.location
+      },
+      educationList: resumeForm.value.educationList.map(edu => ({
+        school: edu.school,
+        degree: edu.degree,
+        major: edu.major,
+        startDate: formatDate(edu.timeRange[0]),
+        endDate: formatDate(edu.timeRange[1], true) // 处理"至今"情况
+      })),
+      workExperienceList: resumeForm.value.workExperienceList.map(work => ({
+        company: work.company,
+        position: work.position,
+        description: work.description,
+        startDate: formatDate(work.timeRange[0]),
+        endDate: formatDate(work.timeRange[1])
+      }))
+    };
 
-    // 处理教育经历时间
-    if (payload.educationList) {
-      payload.educationList.forEach((edu: any) => {
-        if (Array.isArray(edu.timeRange) && edu.timeRange.length === 2) {
-          edu.startDate = edu.timeRange[0].toISOString();
-          edu.endDate = edu.timeRange[1].toISOString();
-        }
-        delete edu.timeRange;
+    // 调试输出
+    console.log('发送的请求体:', JSON.stringify(payload, null, 2));
+
+    const response = await updateResume(payload);
+
+    if (response.data.success) {
+      ElMessage.success('简历更新成功！');
+      router.back();
+    } else {
+      throw new Error(response.data.msg || '更新失败');
+    }
+  } catch (error) {
+    console.error("更新失败:", error);
+    if (axios.isAxiosError(error)) {
+      console.error("错误详情:", {
+        url: error.config?.url,
+        data: error.config?.data,
+        response: error.response?.data
       });
     }
-
-    // 处理工作经历时间
-    if (payload.workExperienceList) {
-      payload.workExperienceList.forEach((work: any) => {
-        if (Array.isArray(work.timeRange) && work.timeRange.length === 2) {
-          work.startDate = work.timeRange[0].toISOString();
-          work.endDate = work.timeRange[1].toISOString();
-        }
-        delete work.timeRange;
-      });
-    }
-
-    await axios.post('/api/resume/update', payload);
-    ElMessage.success('简历更新成功！');
-    router.back();
-  } catch (e) {
-    console.error("更新失败:", e);
-    ElMessage.error("更新失败: " + (e instanceof Error ? e.message : '未知错误'));
+    ElMessage.error("更新失败: " + (error instanceof Error ? error.message : '未知错误'));
   } finally {
     isSaving.value = false;
   }
 };
+
+// 辅助函数：格式化日期为YYYY-MM格式
+function formatDate(date: Date): string {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  return `${year}-${month}`;
+}
 
 const addEducation = () => {
   resumeForm.value.educationList.push({
