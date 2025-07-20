@@ -84,9 +84,6 @@
       <h2>推荐提升课程</h2>
       <div class="course-list">
         <div v-for="(course, index) in recommendedCourses" :key="index" class="course-card">
-          <div class="course-image">
-            <img :src="course.image" alt="课程封面">
-          </div>
           <div class="course-info">
             <h3>{{ course.title }}</h3>
             <p>{{ course.description }}</p>
@@ -144,7 +141,7 @@ const conversationRounds = ref([
     ],
     dialogs: [
       { role: 'interviewer', message: '您好，请简单介绍一下自己。' },
-      { role: 'candidate', message: '面试官您好，我是许战，中国矿业大学计算机科学与技术专业应届毕业生。主修Java开发技术栈，熟悉Spring Boot和MySQL，在校期间参与过3个企业级项目开发，曾获校级程序设计大赛二等奖。我的特点是学习能力强，最近三个月通过自学掌握了Redis和Docker的实战应用。' }
+      { role: 'candidate', message: '面试官您好，我是许战，中国矿业大学计算机科学与技术专业的应届毕业生。平时主要钻研Java开发技术，对Spring Boot和MySQL都比较熟悉。在校期间跟着导师做过几个企业项目，还拿过校程序设计比赛的二等奖。我特别喜欢钻研新技术，最近刚自学了Redis和Docker，还用在了一个课程设计里。' }
     ]
   },
   {
@@ -158,7 +155,7 @@ const conversationRounds = ref([
     ],
     dialogs: [
       { role: 'interviewer', message: '请说明Java中如何保证多线程安全？' },
-      { role: 'candidate', message: '在电商项目开发中，我们遇到过库存超卖问题。解决方案是：1) 使用synchronized修饰减库存方法；2) 采用Redis分布式锁处理集群环境；3) 最终改用乐观锁方案，在SQL中通过version字段控制："UPDATE product SET stock=stock-1, version=version+1 WHERE id=? AND version=?"。三种方案根据业务场景各有优劣，单机环境synchronized足够，分布式系统需要更完善的方案。' }
+      { role: 'candidate', message: '这个我在做电商项目时深有体会。当时遇到库存超卖的问题，我们尝试了好几种方案。最开始用synchronized给减库存方法加锁，简单有效但性能一般。后来系统要上集群，就改用了Redis分布式锁。最后发现最优雅的方案是用乐观锁，就是在SQL里加个version字段控制，这样既保证了安全又不会影响性能。实际开发中要根据业务场景灵活选择。' }
     ]
   },
   {
@@ -172,7 +169,7 @@ const conversationRounds = ref([
     ],
     dialogs: [
       { role: 'interviewer', message: '请详细介绍简历中的在线考试系统项目？' },
-      { role: 'candidate', message: '我负责的模块是自动组卷系统，主要解决两个技术难点：1) 使用遗传算法实现智能组卷，将组卷时间从平均30秒优化到5秒内；2) 通过Redis缓存题库和试卷模板，QPS从200提升到1500。项目采用Spring Cloud架构，我独立完成了算法模块的接口设计和性能优化，最终系统支持了全校3万师生的在线考试需求。' }
+      { role: 'candidate', message: '我主要负责自动组卷这个模块。刚开始组卷特别慢，要半分钟才能生成一套试卷。后来我研究了下遗传算法，把时间优化到了5秒以内。然后又发现题库查询压力大，就用Redis做了缓存，这样系统能支持的并发量从200一下子涨到了1500。整个项目是用Spring Cloud做的，我独立完成了算法模块的开发和优化，最后这个系统支撑了我们学校3万多师生的在线考试。' }
     ]
   },
   {
@@ -186,10 +183,7 @@ const conversationRounds = ref([
     ],
     dialogs: [
       { role: 'interviewer', message: '如果系统在高峰期崩溃，您会如何处理？' },
-      { role: 'candidate', message: `Situation：在电商大促期间，订单服务突然不可用，每秒损失超万元。
-Task：作为值班工程师，需在10分钟内恢复服务并保证数据一致性。
-Action：1) 立即启动熔断机制，将流量切到降级页面；2) 通过APM工具定位到数据库连接池耗尽；3) 临时扩容连接池并重启服务；4) 补偿处理积压订单。
-Result：15分钟内恢复核心功能，事后通过引入Hystrix和优化SQL，使系统抗住了后续流量高峰。这次经历让我养成了提前做压力测试的习惯。` }
+      { role: 'candidate', message: '去年双十一我们确实遇到过这种情况。当时订单服务突然挂了，每秒钟都在损失订单。我作为值班工程师，首先启动了熔断机制，把流量引导到降级页面，避免影响扩大。然后通过监控系统发现是数据库连接池不够用了，就赶紧临时扩容。服务恢复后，又专门处理了积压的订单。整个处理过程大概15分钟，后来我们引入了Hystrix做熔断，还优化了SQL语句，现在系统稳定多了。这次经历让我深刻体会到提前做压力测试的重要性。' }
     ]
   },
   {
@@ -203,7 +197,7 @@ Result：15分钟内恢复核心功能，事后通过引入Hystrix和优化SQL�
     ],
     dialogs: [
       { role: 'interviewer', message: '您对我们公司还有什么想了解的吗？' },
-      { role: 'candidate', message: '我想了解：1) 技术团队目前正在攻关的技术难点是什么？2) 对于应届生，公司有哪些培养机制？3) 这个岗位未来3年可能的发展路径是怎样的？这些信息将帮助我更好地规划职业发展。' }
+      { role: 'candidate', message: '首先想了解下咱们技术团队现在正在攻克的技术难点是什么？然后作为应届生，我也很关心公司会有哪些培养计划。最后如果能了解一下这个岗位未来几年的发展路径，对我规划职业方向会很有帮助。' }
     ]
   }
 ])
