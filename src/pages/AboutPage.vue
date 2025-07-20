@@ -1,12 +1,16 @@
 <!-- 关于页，没登录默认进到这里，后续会修改美化 -->
 
-
 <template>
   <div class="about-container">
     <div class="hero-section">
-      <h1 class="title">AI面试助手</h1>
+      <div class="logo-container">
+        <img src="@/assets/images/logo.png" alt="AI面试助手 Logo" class="logo-image" />
+      </div>
+      <h1 class="title">职慧通</h1>
       <p class="subtitle">提升你的面试技能，开启职业新篇章</p>
-      <el-button type="primary" size="large" class="start-button" @click="router.push('/login')">开始体验</el-button>
+      <el-button type="primary" size="large" class="start-button" @click="router.push('/login')"
+        >开始体验</el-button
+      >
     </div>
 
     <div class="features-section">
@@ -30,22 +34,20 @@
 </template>
 
 <script setup lang="ts">
-import { Document, Microphone, DataAnalysis } from '@element-plus/icons-vue'
-import { useRouter } from 'vue-router'
+import { Document, Microphone, DataAnalysis } from "@element-plus/icons-vue";
+import { useRouter } from "vue-router";
 
-const router = useRouter()
+const router = useRouter();
 </script>
 
-
-
 <script lang="ts">
-  export default {
-    name: 'AboutPage',
-  }
+export default {
+  name: "AboutPage",
+};
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap");
 
 @keyframes fadeIn {
   from {
@@ -55,7 +57,6 @@ const router = useRouter()
     opacity: 1;
   }
 }
-
 
 @keyframes background-pan {
   0% {
@@ -69,8 +70,18 @@ const router = useRouter()
   }
 }
 
+.logo-image {
+  height: 240px; /* 原80px改为60px，可根据需要调整 */
+  width: auto;
+  max-width: 600px; /* 原200px改为150px */
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+  transition: all 0.3s ease;
+}
+
+
 .about-container {
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   min-height: 100vh;
   width: 100%;
   margin: 0;
@@ -147,14 +158,20 @@ const router = useRouter()
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.18);
   transform: translateY(20px);
-  animation: fadeIn 0.6s ease-out ;
+  animation: fadeIn 0.6s ease-out;
   animation-delay: calc(0.25s * var(--i, 1));
   transition: opacity 0.6s ease-out, transform 0.3s ease-out, box-shadow 0.3s ease-in-out;
 }
 
-.feature-card:nth-child(1) { --i: 1; }
-.feature-card:nth-child(2) { --i: 2; }
-.feature-card:nth-child(3) { --i: 3; }
+.feature-card:nth-child(1) {
+  --i: 1;
+}
+.feature-card:nth-child(2) {
+  --i: 2;
+}
+.feature-card:nth-child(3) {
+  --i: 3;
+}
 
 .feature-card:hover {
   transform: translateY(-10px);

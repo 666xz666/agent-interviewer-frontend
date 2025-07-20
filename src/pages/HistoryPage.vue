@@ -58,6 +58,9 @@ import { getInterviewList } from '@/api/interview'
 import type { InterviewListItem } from '@/api/interview'
 import { Clock, Search, CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import type { DefineComponent } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const historyList = ref<InterviewListItem[]>([])
 const loading = ref(false)
@@ -112,7 +115,6 @@ const getStatusIcon = (status: string) => {
     COMPLETED: CircleCheck,
     FAILED: CircleClose
   }
-
   return iconMap[status as keyof typeof iconMap]
 }
 
@@ -120,9 +122,8 @@ const getRowClassName = ({ row }: { row: InterviewListItem }) => {
   return `status-row-${row.status.toLowerCase()}`
 }
 
-const viewDetail = (row: InterviewListItem) => {
-  console.log('查看详情', row)
-  // 这里可以跳转到详情页或打开详情弹窗
+const viewDetail = () => {
+  router.push('/interview/evaluation/') // 直接跳转到评价页面
 }
 
 const replayInterview = (row: InterviewListItem) => {

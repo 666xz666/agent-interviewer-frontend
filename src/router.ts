@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { loginWithSession } from '@/api/auth'
 import { ElMessage } from 'element-plus'
 import MainLayout from '@/layouts/MainLayout.vue'
+import component from 'element-plus/es/components/tree-select/src/tree-select-option.mjs'
 
 
 
@@ -55,14 +56,24 @@ const routes = [
         path: '/interview/create',
         name: 'CreateInterview',
         component: () => import('@/pages/CreateInterview.vue')
+      },
+      {
+        path: '/exercise',
+        name: 'Exercise',
+        component: () => import('@/pages/ExercisePage.vue')
+      },
+      {
+        path: '/interview/evaluation/',
+        name: 'InterviewEvaluation',
+        component: () => import('@/pages/InterviewEvaluationPage.vue')
       }
     ]
   },
-  // {
-  //   path: '/about',
-  //   name: 'about',
-  //   component: () => import('@/pages/HomePage.vue')
-  // },
+  {
+    path: '/',
+    name: 'about',
+    component: () => import('@/pages/AboutPage.vue')
+  },
   // {
   //   path: '/interview',
   //   name: 'interview',

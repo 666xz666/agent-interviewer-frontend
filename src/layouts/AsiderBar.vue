@@ -25,6 +25,10 @@
       <el-icon><DataLine /></el-icon>
       <template #title>面试历史</template>
     </el-menu-item>
+    <el-menu-item index="/exercise">
+      <el-icon><PieChart /></el-icon>
+      <template #title>题目练习</template>
+    </el-menu-item>
     <el-menu-item index="/analysis">
       <el-icon><PieChart /></el-icon>
       <template #title>能力分析</template>
@@ -43,24 +47,24 @@ import {
   ChatLineRound,
   DataLine,
   PieChart,
-  Setting
-} from '@element-plus/icons-vue'
-import { ref, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+  Setting,
+} from "@element-plus/icons-vue";
+import { ref, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 
-const router = useRouter()
-const route = useRoute()
-const activeMenu = ref(route.path)
-const isCollapse = ref(false)
+const router = useRouter();
+const route = useRoute();
+const activeMenu = ref(route.path);
+const isCollapse = ref(false);
 
 watch(route, (newRoute) => {
-  activeMenu.value = newRoute.path
-})
+  activeMenu.value = newRoute.path;
+});
 
 const handleSelect = (key) => {
-  activeMenu.value = key
-  router.push(key)
-}
+  activeMenu.value = key;
+  router.push(key);
+};
 </script>
 
 <style scoped>

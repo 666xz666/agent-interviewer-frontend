@@ -3,8 +3,8 @@
     <!-- 左侧导航栏 -->
     <div class="sidebar" :class="{ 'collapsed': isCollapse }">
       <div class="logo-area">
-        <h2 v-show="!isCollapse">智能面试系统</h2>
-        <h2 v-show="isCollapse">智能</h2>
+        <h2 v-show="!isCollapse">职慧通</h2>
+        <h2 v-show="isCollapse">职慧通</h2>
       </div>
       <Asider :is-collapse="isCollapse" />
     </div>
@@ -81,7 +81,8 @@ const getPageTitle = computed(() => {
     '/interview': '模拟面试',
     '/history': '面试历史',
     '/analysis': '能力分析',
-    '/settings': '系统设置'
+    '/settings': '系统设置',
+    '/exercise': '题目练习'
   }
   return titleMap[route.path] || '智能面试系统'
 })
