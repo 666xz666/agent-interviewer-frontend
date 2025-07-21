@@ -239,7 +239,17 @@ const handleUploadSuccess = (response, file) => {
 }
 
 const downloadResume = (resumeData) => {
-  ElMessage.success('简历下载功能开发中...')
+  const pdfUrl = 'https://pic--oss.oss-cn-beijing.aliyuncs.com/img/resume-xuzhan.pdf';
+
+  // 创建一个隐藏的a标签来触发下载
+  const link = document.createElement('a');
+  link.href = pdfUrl;
+  link.download = resumeData?.originalFileName ? `${resumeData.originalFileName}.pdf` : 'resume-xuzhan.pdf';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  ElMessage.success('简历下载开始');
 }
 
 // 初始化获取简历列表
