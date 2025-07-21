@@ -86,7 +86,7 @@
             <span>{{ work.startDate }} 至 {{ work.endDate }}</span>
           </div>
           <p><strong>项目描述:</strong> {{ work.description }}</p>
-          <p style="white-space: pre-wrap;"><strong>职责:</strong> {{ work.responsibilities }}</p>
+          <!-- <p style="white-space: pre-wrap;"><strong>职责:</strong> {{ work.responsibilities }}</p> -->
         </div>
       </div>
 
