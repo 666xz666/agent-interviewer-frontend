@@ -44,18 +44,17 @@
             <span>面试对话</span>
           </div>
         </template>
-                <!-- 在聊天窗口下方添加数字人视频 -->
+        <!-- 在聊天窗口下方添加数字人视频 -->
         <div class="digital-human-video-container">
           <div class="video-wrapper">
             <video
               ref="digitalHumanVideo"
-              :src="digitalHumanVideoSrc"
+              :src="currentVideoSrc"
               autoplay
-              loop
-              muted
               playsinline
               @canplay="onDigitalHumanVideoReady"
               @error="onDigitalHumanVideoError"
+              @ended="handleVideoEnded"
             ></video>
             <div v-if="!isDigitalHumanVideoReady" class="video-loading">
               <el-icon class="is-loading" :size="30"><Loading /></el-icon>
@@ -103,15 +102,62 @@
           </div>
         </div>
         <div class="chat-input-area">
-          <p class="voice-tip">
-            <el-icon v-if="isRecording" class="recording-icon">
-              <Mic />
-            </el-icon>
-            {{ isRecording ? "正在聆听中..." : "请通过语音回答，系统将自动识别" }}
-          </p>
+          <!-- 文本输入框 -->
+          <el-input
+            v-model="userInputText"
+            type="textarea"
+            :rows="2"
+            placeholder="请输入回答内容或点击右侧麦克风语音输入"
+            resize="none"
+            @keyup.enter="handleTextSend"
+            class="input-textarea"
+          />
+
+          <!-- 独立添加操作按钮 -->
+          <div class="action-buttons">
+            <el-tooltip :content="isRecording ? '停止录音' : '开始录音'">
+              <el-button
+                @click="toggleVoiceInput"
+                :type="isRecording ? 'danger' : 'primary'"
+                circle
+                class="voice-btn"
+              >
+                <el-icon><Mic /></el-icon>
+              </el-button>
+            </el-tooltip>
+
+            <el-button type="primary" @click="handleTextSend" class="send-btn"> 发送 </el-button>
+          </div>
+
+          <!-- 录音状态提示 -->
+          <div v-if="isRecording" class="recording-status">
+            <el-icon class="recording-icon"><Mic /></el-icon>
+            <span>正在录音中... ({{ recordingDuration }}秒)</span>
+          </div>
         </div>
       </el-card>
     </div>
+    <!-- 面试结束弹窗 -->
+    <el-dialog
+      v-model="isInterviewEndDialogVisible"
+      title="面试结束"
+      width="500px"
+      :show-close="false"
+      :modal="true"
+    >
+      <div class="dialog-content">
+        <p>恭喜您完成所有面试问题！</p>
+        <p>面试官会根据您的表现进行综合评估。</p>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <!-- 右下角的评估按钮 -->
+          <el-button type="primary" @click="handleStartEvaluation" class="evaluation-btn">
+            开始评估
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -129,12 +175,18 @@ import {
 } from "@/pages/speech";
 import { Mic } from "@element-plus/icons-vue";
 import { useRouter, useRoute } from "vue-router";
-import myself from '@/assets/video/myself.mp4'
-const digitalHumanVideoSrc = ref(myself)
+import video1 from "@/assets/video/1.mp4";
+import video2 from "@/assets/video/2.mp4";
+import video3 from "@/assets/video/3.mp4";
+import video4 from "@/assets/video/4.mp4";
+import video5 from "@/assets/video/5.mp4";
 
 // 状态变量
 const router = useRouter();
 const route = useRoute();
+const userInputText = ref("");
+const recordingDuration = ref(0);
+let recordingTimer: ReturnType<typeof setInterval> | null = null;
 const isInterviewing = ref(false);
 const isCameraReady = ref(false);
 const isAiThinking = ref(false);
@@ -143,6 +195,7 @@ const cameraStatusText = ref("正在请求摄像头权限...");
 // DOM 引用
 const videoRef = ref<HTMLVideoElement | null>(null);
 const chatWindowRef = ref<HTMLDivElement | null>(null);
+const isInterviewEndDialogVisible = ref(false);
 
 // 聊天消息类型
 interface ChatMessage {
@@ -167,19 +220,114 @@ const isRecording = ref(false);
 let websocket: WebSocket | null = null;
 let recorderControls: ReturnType<typeof createRecorder> | null = null;
 
-const isDigitalHumanVideoReady = ref(false)
-const videoLoadingText = ref('AI面试官加载中...')
-const digitalHumanVideo = ref<HTMLVideoElement | null>(null)
+const isDigitalHumanVideoReady = ref(false);
+const videoLoadingText = ref("AI面试官加载中...");
+const digitalHumanVideo = ref<HTMLVideoElement | null>(null);
+const currentQuestionIndex = ref(0); // 当前问题索引
+
+const questions = [
+  {
+    text: "您好！我是今天的面试官，负责这次Java后端开发工程师的招聘。很高兴见到您，感谢您抽出宝贵的时间来参加这次面试。首先，我需要了解一下您的基本信息。请您简单介绍一下自己。", // 替换为你的第一个问题
+    videoSrc: video1, // 替换为你的第一个视频路径
+  },
+  {
+    text: "好的，许战同学。接下来，我想了解一下您在Java后端开发方面的基础知识和技能。请您谈谈您对Spring框架的理解以及它的主要特点和应用。", // 替换为你的第二个问题
+    videoSrc: video2, // 替换为你的第二个视频路径
+  },
+  {
+    text: "好的，许战同学。您对Spring框架的理解很全面。接下来，我想了解一下您在项目开发中遇到的一个技术难题以及您是如何解决的。请您谈谈在校园论坛后端开发项目中，您是如何优化数据库查询性能的？", // 替换为你的第三个问题
+    videoSrc: video3, // 替换为你的第三个视频路径
+  },
+  {
+    text: "好的，许战同学。您在优化数据库查询性能方面做得非常出色。接下来，我想了解一下您在实际项目中是如何进行代码重构和优化的。请您谈谈在校园论坛后端开发项目中，您是如何对一个复杂模块进行代码重构以提高其可读性和可维护性的？", // 替换为你的第四个问题
+    videoSrc: video4, // 替换为你的第四个视频路径
+  },
+  {
+    text: "今天的面试结束了，感谢你的到来，后续面试结果我们会统一通过邮件通知，大概在5天左右，请留意查看。祝你求职顺利！", // 替换为你的第五个问题
+    videoSrc: video5, // 替换为你的第五个视频路径
+  },
+];
+const currentVideoSrc = ref(questions[0].videoSrc); // 初始化为第一个视频
+
+// 语音输入开关
+const toggleVoiceInput = () => {
+  if (isRecording.value) {
+    // 停止录音
+    recorderControls?.recStop();
+    clearTimer();
+  } else {
+    // 开始录音
+    isRecording.value = true;
+    recordingDuration.value = 0;
+    recordingTimer = setInterval(() => {
+      recordingDuration.value++;
+    }, 1000);
+    recorderControls?.recStart();
+  }
+};
+
+// 清除计时器
+const clearTimer = () => {
+  if (recordingTimer) {
+    clearInterval(recordingTimer);
+    recordingTimer = null;
+  }
+  isRecording.value = false;
+};
+
+// 更新识别结果到文本框
+const updateTranscript = (text: string) => {
+  userInputText.value = text;
+};
+
+const handleTextSend = () => {
+  if (!userInputText.value.trim()) return;
+
+  // 添加用户回答到聊天记录
+  chatHistory.value.push({
+    role: "user",
+    content: userInputText.value,
+    time: new Date().toLocaleTimeString()
+  });
+  userInputText.value = "";
+  scrollToBottom();
+
+  // 判断是否是最后一个问题（索引为4，因为数组从0开始）
+  if (currentQuestionIndex.value === questions.length - 1) {
+    // 最后一个问题回答后，显示结束弹窗
+    setTimeout(() => {
+      isInterviewEndDialogVisible.value = true; // 显示弹窗
+      isInterviewing.value = false;
+    }, 1000);
+  } else {
+    // 非最后一个问题，切换到下一个
+    isAiThinking.value = true;
+    setTimeout(() => {
+      currentQuestionIndex.value++;
+      playCurrentQuestion();
+      isAiThinking.value = false;
+    }, 1500);
+  }
+};
+
+// 新增：点击开始评估的处理函数
+const handleStartEvaluation = () => {
+  isInterviewEndDialogVisible.value = false; // 关闭弹窗
+  // 这里可以添加评估逻辑，例如跳转到评估页面
+  ElMessage.success("开始评估");
+  // 示例：路由跳转（如果需要）
+  // router.push("/interview/evaluation");
+};
 
 const onDigitalHumanVideoReady = () => {
-  isDigitalHumanVideoReady.value = true
-}
+  isDigitalHumanVideoReady.value = true;
+};
 
 const onDigitalHumanVideoError = () => {
-  console.error('数字人视频加载失败')
-  videoLoadingText.value = '视频加载失败，请刷新页面'
-  isDigitalHumanVideoReady.value = false
-}
+  console.error("数字人视频加载失败", digitalHumanVideo.value?.error);
+  videoLoadingText.value = `视频加载失败: ${digitalHumanVideo.value?.error?.message || "未知错误"}`;
+  isDigitalHumanVideoReady.value = false;
+};
 
 // 初始化语音识别
 const initSpeechRecognition = () => {
@@ -256,22 +404,6 @@ const sendAudioData = async (blob: Blob) => {
       },
     })
   );
-};
-
-// 更新转录文本
-const updateTranscript = (text: string) => {
-  const lastMessage = chatHistory.value[chatHistory.value.length - 1];
-
-  if (lastMessage && lastMessage.role === "user") {
-    lastMessage.content = text;
-  } else {
-    chatHistory.value.push({
-      role: "user",
-      content: text,
-    });
-  }
-
-  scrollToBottom();
 };
 
 // 图片压缩函数
@@ -420,22 +552,18 @@ const startInterviewProcess = async () => {
     initSpeechRecognition();
 
     // 开始录音
-    recorderControls?.recStart();
-    isRecording.value = true;
+    // recorderControls?.recStart();
+    // isRecording.value = true;
 
     ElMessage.success("面试开始！");
 
     // 10秒后执行表情识别
     setTimeout(captureAndAnalyzeOnce, 10000);
-
-    // AI开场提问
-    setTimeout(
-      () => askAiQuestion("你好，欢迎参加本次模拟面试。请先做一个简单的自我介绍吧。"),
-      500
-    );
   } catch (error) {
     ElMessage.error("无法启动语音识别: " + (error as Error).message);
   }
+  currentQuestionIndex.value = 0; // 重置为第一个问题
+  playCurrentQuestion(); // 播放第一个视频和问题
 };
 
 // 停止摄像头
@@ -462,42 +590,35 @@ const askAiQuestion = (question: string): void => {
   scrollToBottom();
 };
 
-// // 修改后的开始面试
-// const startInterview = async (): Promise<void> => {
-//   if (!isCameraReady.value) {
-//     ElMessage.warning('请先允许摄像头和麦克风权限');
-//     return;
-//   }
+const handleVideoEnded = () => {
+  console.log("当前视频播放结束");
+  // 可添加视频播放完后的逻辑（如自动显示问题文本）
+};
 
-//   try {
-//     // 检查麦克风权限
-//     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-//     stream.getTracks().forEach(track => track.stop());
+// 新增播放当前问题的核心函数
+const playCurrentQuestion = () => {
+  const current = questions[currentQuestionIndex.value];
+  currentVideoSrc.value = current.videoSrc; // 更新视频源
+  isDigitalHumanVideoReady.value = false;
+  videoLoadingText.value = `加载第${currentQuestionIndex.value + 1}个问题视频...`;
 
-//     isInterviewing.value = true;
-//     chatHistory.value = [];
-//     expressionResult.value = null;
-//     resetRecognitionResult();
+  // 重新加载并播放视频
+  if (digitalHumanVideo.value) {
+    digitalHumanVideo.value.load();
+    digitalHumanVideo.value.play().catch((err) => {
+      console.error("视频播放失败:", err);
+    });
+  }
 
-//     // 初始化语音识别
-//     initSpeechRecognition();
+  // 添加问题到聊天记录
+  chatHistory.value.push({
+    role: "assistant",
+    content: current.text,
+    time: new Date().toLocaleTimeString(),
+  });
+  scrollToBottom();
+};
 
-//     // 开始录音
-//     recorderControls?.recStart();
-//     isRecording.value = true;
-
-//     ElMessage.success('面试开始！');
-
-//     // 10秒后执行表情识别
-//     setTimeout(captureAndAnalyzeOnce, 10000);
-
-//     // AI开场提问
-//     setTimeout(() => askAiQuestion("你好，欢迎参加本次模拟面试。请先做一个简单的自我介绍吧。"), 500);
-
-//   } catch (error) {
-//     ElMessage.error('无法启动语音识别: ' + (error as Error).message);
-//   }
-// };
 const startInterview = () => {
   router.push("/interview/create");
 };
@@ -546,12 +667,12 @@ onUnmounted(() => {
 }
 
 .video-panel {
-  flex: 6;
+  flex: 5;
   display: flex;
 }
 
 .chat-panel {
-  flex: 4;
+  flex: 5;
   display: flex;
 }
 
@@ -769,9 +890,57 @@ onUnmounted(() => {
 }
 
 .chat-input-area {
-  padding: 12px 16px;
+  padding: 16px;
+  background: #fff;
   border-top: 1px solid var(--el-border-color);
-  background-color: #fff;
+  position: relative;
+}
+
+/* 输入框样式 */
+.input-textarea {
+  margin-bottom: 10px;
+}
+
+/* 按钮容器 */
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 语音按钮样式 */
+.voice-btn {
+  font-size: 18px;
+  transition: all 0.3s;
+}
+
+/* 录音状态提示 */
+.recording-status {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  color: var(--el-color-danger);
+  font-size: 14px;
+}
+
+.recording-icon {
+  margin-right: 8px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .voice-tip {
@@ -893,5 +1062,40 @@ onUnmounted(() => {
   .digital-human-video-container .video-wrapper {
     height: 150px;
   }
+}
+:deep(.el-input-group__append) {
+  border: 1px solid red; /* 调试用 */
+}
+
+/* 面试结束弹窗样式 */
+.dialog-content {
+  padding: 20px 0;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end; /* 按钮靠右显示 */
+}
+
+.evaluation-btn {
+  background-color: #409eff;
+  color: white;
+}
+
+/* 弹窗样式优化 */
+:deep(.el-dialog__header) {
+  border-bottom: 1px solid #eee;
+  padding: 15px 20px;
+}
+
+:deep(.el-dialog__body) {
+  padding: 20px;
+}
+
+:deep(.el-dialog__footer) {
+  padding: 15px 20px;
+  border-top: 1px solid #eee;
 }
 </style>
