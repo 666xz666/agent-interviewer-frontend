@@ -21,7 +21,13 @@
           </div>
         </div>
         <div class="controls">
-          <el-button v-if="!isInterviewing" type="success" size="large" @click="startInterview" :icon="VideoPlay">
+          <el-button
+            v-if="!isInterviewing"
+            type="success"
+            size="large"
+            @click="startInterview"
+            :icon="VideoPlay"
+          >
             创建面试
           </el-button>
           <el-button v-else type="danger" size="large" @click="endInterview" :icon="VideoPause">
@@ -38,12 +44,35 @@
             <span>面试对话</span>
           </div>
         </template>
+                <!-- 在聊天窗口下方添加数字人视频 -->
+        <div class="digital-human-video-container">
+          <div class="video-wrapper">
+            <video
+              ref="digitalHumanVideo"
+              :src="digitalHumanVideoSrc"
+              autoplay
+              loop
+              muted
+              playsinline
+              @canplay="onDigitalHumanVideoReady"
+              @error="onDigitalHumanVideoError"
+            ></video>
+            <div v-if="!isDigitalHumanVideoReady" class="video-loading">
+              <el-icon class="is-loading" :size="30"><Loading /></el-icon>
+              <p>{{ videoLoadingText }}</p>
+            </div>
+          </div>
+        </div>
         <div class="chat-window" ref="chatWindowRef">
           <div v-for="(message, index) in chatHistory" :key="index" class="message-wrapper">
             <div :class="['message', message.role]">
               <div class="avatar">
-                <img v-if="message.role === 'user'" src="@/assets/images/user-avatar.png" alt="用户">
-                <img v-else src="@/assets/images/ai-avatar.png" alt="AI">
+                <img
+                  v-if="message.role === 'user'"
+                  src="@/assets/images/user-avatar.png"
+                  alt="用户"
+                />
+                <img v-else src="@/assets/images/ai-avatar.png" alt="AI" />
               </div>
               <div class="bubble">
                 <div class="content">
@@ -60,7 +89,7 @@
           <div v-if="isAiThinking" class="message-wrapper">
             <div class="message assistant">
               <div class="avatar">
-                <img src="@/assets/images/ai-avatar.png" alt="AI">
+                <img src="@/assets/images/ai-avatar.png" alt="AI" />
               </div>
               <div class="bubble">
                 <div class="content thinking">
@@ -78,7 +107,7 @@
             <el-icon v-if="isRecording" class="recording-icon">
               <Mic />
             </el-icon>
-            {{ isRecording ? '正在聆听中...' : '请通过语音回答，系统将自动识别' }}
+            {{ isRecording ? "正在聆听中..." : "请通过语音回答，系统将自动识别" }}
           </p>
         </div>
       </el-card>
@@ -87,50 +116,70 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { VideoPlay, VideoPause, CameraFilled } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { analyzeExpression } from '@/api/interview'
-import { createRecorder } from '@/pages/recoder';
-import { getWebSocketUrl, arrayBufferToBase64, processRecognitionResult, resetRecognitionResult } from '@/pages/speech';
-import { Mic } from '@element-plus/icons-vue'
-import { useRouter, useRoute } from 'vue-router'
-
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { VideoPlay, VideoPause, CameraFilled, Loading } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+import { analyzeExpression } from "@/api/interview";
+import { createRecorder } from "@/pages/recoder";
+import {
+  getWebSocketUrl,
+  arrayBufferToBase64,
+  processRecognitionResult,
+  resetRecognitionResult,
+} from "@/pages/speech";
+import { Mic } from "@element-plus/icons-vue";
+import { useRouter, useRoute } from "vue-router";
+import myself from '@/assets/video/myself.mp4'
+const digitalHumanVideoSrc = ref(myself)
 
 // 状态变量
-const router = useRouter()
-const route = useRoute()
-const isInterviewing = ref(false)
-const isCameraReady = ref(false)
-const isAiThinking = ref(false)
-const cameraStatusText = ref('正在请求摄像头权限...')
+const router = useRouter();
+const route = useRoute();
+const isInterviewing = ref(false);
+const isCameraReady = ref(false);
+const isAiThinking = ref(false);
+const cameraStatusText = ref("正在请求摄像头权限...");
 
 // DOM 引用
-const videoRef = ref<HTMLVideoElement | null>(null)
-const chatWindowRef = ref<HTMLDivElement | null>(null)
+const videoRef = ref<HTMLVideoElement | null>(null);
+const chatWindowRef = ref<HTMLDivElement | null>(null);
 
 // 聊天消息类型
 interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
+  role: "user" | "assistant";
+  content: string;
 }
-const chatHistory = ref<ChatMessage[]>([])
+const chatHistory = ref<ChatMessage[]>([]);
 
 // 媒体流
-let mediaStream: MediaStream | null = null
+let mediaStream: MediaStream | null = null;
 
 // 表情分析结果类型
 interface ExpressionResult {
-  emotion: string
-  confidence: number
-  isFace: boolean
+  emotion: string;
+  confidence: number;
+  isFace: boolean;
 }
-const expressionResult = ref<ExpressionResult | null>(null)
+const expressionResult = ref<ExpressionResult | null>(null);
 
 // 新增状态变量
 const isRecording = ref(false);
 let websocket: WebSocket | null = null;
 let recorderControls: ReturnType<typeof createRecorder> | null = null;
+
+const isDigitalHumanVideoReady = ref(false)
+const videoLoadingText = ref('AI面试官加载中...')
+const digitalHumanVideo = ref<HTMLVideoElement | null>(null)
+
+const onDigitalHumanVideoReady = () => {
+  isDigitalHumanVideoReady.value = true
+}
+
+const onDigitalHumanVideoError = () => {
+  console.error('数字人视频加载失败')
+  videoLoadingText.value = '视频加载失败，请刷新页面'
+  isDigitalHumanVideoReady.value = false
+}
 
 // 初始化语音识别
 const initSpeechRecognition = () => {
@@ -146,7 +195,7 @@ const initWebSocket = () => {
   websocket = new WebSocket(getWebSocketUrl());
 
   websocket.onopen = () => {
-    console.log('WebSocket连接已建立');
+    console.log("WebSocket连接已建立");
     sendStartParams();
   };
 
@@ -158,12 +207,12 @@ const initWebSocket = () => {
   };
 
   websocket.onerror = (error) => {
-    console.error('WebSocket错误:', error);
-    ElMessage.error('语音识别连接错误');
+    console.error("WebSocket错误:", error);
+    ElMessage.error("语音识别连接错误");
   };
 
   websocket.onclose = () => {
-    console.log('WebSocket连接已关闭');
+    console.log("WebSocket连接已关闭");
   };
 };
 
@@ -197,26 +246,28 @@ const sendAudioData = async (blob: Blob) => {
   if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
 
   const arrayBuffer = await blob.arrayBuffer();
-  websocket.send(JSON.stringify({
-    data: {
-      status: 1,
-      format: "audio/L16;rate=16000",
-      encoding: "raw",
-      audio: arrayBufferToBase64(arrayBuffer),
-    },
-  }));
+  websocket.send(
+    JSON.stringify({
+      data: {
+        status: 1,
+        format: "audio/L16;rate=16000",
+        encoding: "raw",
+        audio: arrayBufferToBase64(arrayBuffer),
+      },
+    })
+  );
 };
 
 // 更新转录文本
 const updateTranscript = (text: string) => {
   const lastMessage = chatHistory.value[chatHistory.value.length - 1];
 
-  if (lastMessage && lastMessage.role === 'user') {
+  if (lastMessage && lastMessage.role === "user") {
     lastMessage.content = text;
   } else {
     chatHistory.value.push({
-      role: 'user',
-      content: text
+      role: "user",
+      content: text,
     });
   }
 
@@ -226,129 +277,139 @@ const updateTranscript = (text: string) => {
 // 图片压缩函数
 const compressImage = async (blob: Blob, maxWidth = 800, quality = 0.7): Promise<Blob> => {
   return new Promise((resolve) => {
-    const img = new Image()
-    const reader = new FileReader()
+    const img = new Image();
+    const reader = new FileReader();
 
     reader.onload = (e) => {
-      img.src = e.target?.result as string
+      img.src = e.target?.result as string;
       img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')!
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d")!;
 
         // 计算压缩比例
-        const scale = Math.min(maxWidth / img.width, 1)
-        canvas.width = img.width * scale
-        canvas.height = img.height * scale
+        const scale = Math.min(maxWidth / img.width, 1);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
 
         // 绘制压缩图片
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
         // 转换为Blob
-        canvas.toBlob((compressedBlob) => {
-          resolve(compressedBlob || blob) // 如果压缩失败返回原图
-        }, 'image/jpeg', quality)
-      }
-    }
+        canvas.toBlob(
+          (compressedBlob) => {
+            resolve(compressedBlob || blob); // 如果压缩失败返回原图
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+    };
 
-    reader.readAsDataURL(blob)
-  })
-}
+    reader.readAsDataURL(blob);
+  });
+};
 
 // 捕获并分析表情（只执行一次）
 const captureAndAnalyzeOnce = async (): Promise<void> => {
-  if (!videoRef.value) return
+  if (!videoRef.value) return;
 
   try {
     // 创建画布
-    const canvas = document.createElement('canvas')
-    canvas.width = videoRef.value.videoWidth
-    canvas.height = videoRef.value.videoHeight
-    const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('无法获取画布上下文')
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.value.videoWidth;
+    canvas.height = videoRef.value.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("无法获取画布上下文");
 
     // 捕获视频帧
-    ctx.drawImage(videoRef.value, 0, 0, canvas.width, canvas.height)
+    ctx.drawImage(videoRef.value, 0, 0, canvas.width, canvas.height);
 
     // 获取原始图片Blob
     const originalBlob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 1.0)
-    })
+      canvas.toBlob((blob) => resolve(blob), "image/jpeg", 1.0);
+    });
 
-    if (!originalBlob) throw new Error('无法生成图片')
+    if (!originalBlob) throw new Error("无法生成图片");
 
     // 压缩图片
-    const compressedBlob = await compressImage(originalBlob)
-    console.log(`图片压缩: ${(originalBlob.size/1024).toFixed(1)}KB → ${(compressedBlob.size/1024).toFixed(1)}KB`)
+    const compressedBlob = await compressImage(originalBlob);
+    console.log(
+      `图片压缩: ${(originalBlob.size / 1024).toFixed(1)}KB → ${(
+        compressedBlob.size / 1024
+      ).toFixed(1)}KB`
+    );
 
     // 发送分析请求
-    const result = await analyzeExpression(compressedBlob)
-    expressionResult.value = result
+    const result = await analyzeExpression(compressedBlob);
+    expressionResult.value = result;
 
     if (!result.isFace) {
-      ElMessage.warning('未检测到有效人脸，请正对摄像头')
+      ElMessage.warning("未检测到有效人脸，请正对摄像头");
     } else {
-      ElMessage.success(`表情识别: ${result.emotion} (置信度: ${(result.confidence * 100).toFixed(1)}%)`)
+      ElMessage.success(
+        `表情识别: ${result.emotion} (置信度: ${(result.confidence * 100).toFixed(1)}%)`
+      );
     }
   } catch (error) {
-    console.error('表情分析失败:', error)
-    ElMessage.error('表情分析失败: ' + (error as Error).message)
+    console.error("表情分析失败:", error);
+    ElMessage.error("表情分析失败: " + (error as Error).message);
   }
-}
+};
 
 // 获取表情标签类型
 const getEmotionTagType = (emotion: string): string => {
   const typeMap: Record<string, string> = {
-    '喜悦': 'success',    // 绿色
-    '愤怒': 'danger',     // 红色
-    '悲伤': 'warning',    // 黄色
-    '惊恐': 'info',       // 蓝色
-    '厌恶': 'danger',     // 红色
-    '中性': '',           // 灰色（默认）
-    '非人脸': 'info',     // 蓝色
-    '其他表情': ''        // 灰色
-  }
-  return typeMap[emotion] || ''
-}
+    喜悦: "success", // 绿色
+    愤怒: "danger", // 红色
+    悲伤: "warning", // 黄色
+    惊恐: "info", // 蓝色
+    厌恶: "danger", // 红色
+    中性: "", // 灰色（默认）
+    非人脸: "info", // 蓝色
+    其他表情: "", // 灰色
+  };
+  return typeMap[emotion] || "";
+};
 
 // 启动摄像头
 const startCamera = async (): Promise<void> => {
   if (!navigator.mediaDevices?.getUserMedia) {
-    cameraStatusText.value = "您的浏览器不支持摄像头功能"
-    ElMessage.error("浏览器不支持摄像头功能")
-    return
+    cameraStatusText.value = "您的浏览器不支持摄像头功能";
+    ElMessage.error("浏览器不支持摄像头功能");
+    return;
   }
 
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({
       video: true,
       audio: true,
-    })
+    });
 
     if (videoRef.value) {
-      videoRef.value.srcObject = mediaStream
-      isCameraReady.value = true
-      cameraStatusText.value = ''
+      videoRef.value.srcObject = mediaStream;
+      isCameraReady.value = true;
+      cameraStatusText.value = "";
     }
   } catch (err) {
-    console.error("无法访问摄像头或麦克风:", err)
-    cameraStatusText.value = "无法访问摄像头，请检查权限"
-    ElMessage.error("无法访问摄像头或麦克风，请检查系统设置或浏览器权限")
+    console.error("无法访问摄像头或麦克风:", err);
+    cameraStatusText.value = "无法访问摄像头，请检查权限";
+    ElMessage.error("无法访问摄像头或麦克风，请检查系统设置或浏览器权限");
   }
-  if (route.query.autoStart === 'true') {
+  if (route.query.autoStart === "true") {
     startInterviewProcess();
   }
-}
+};
 
 const startInterviewProcess = async () => {
   if (!isCameraReady.value) {
-    ElMessage.warning('请先允许摄像头和麦克风权限');
+    ElMessage.warning("请先允许摄像头和麦克风权限");
     return;
   }
 
   try {
     // 检查麦克风权限
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach(track => track.stop());
+    stream.getTracks().forEach((track) => track.stop());
 
     isInterviewing.value = true;
     chatHistory.value = [];
@@ -362,24 +423,26 @@ const startInterviewProcess = async () => {
     recorderControls?.recStart();
     isRecording.value = true;
 
-    ElMessage.success('面试开始！');
+    ElMessage.success("面试开始！");
 
     // 10秒后执行表情识别
     setTimeout(captureAndAnalyzeOnce, 10000);
 
     // AI开场提问
-    setTimeout(() => askAiQuestion("你好，欢迎参加本次模拟面试。请先做一个简单的自我介绍吧。"), 500);
-
+    setTimeout(
+      () => askAiQuestion("你好，欢迎参加本次模拟面试。请先做一个简单的自我介绍吧。"),
+      500
+    );
   } catch (error) {
-    ElMessage.error('无法启动语音识别: ' + (error as Error).message);
+    ElMessage.error("无法启动语音识别: " + (error as Error).message);
   }
 };
 
 // 停止摄像头
 const stopCamera = (): void => {
-  mediaStream?.getTracks().forEach((track: MediaStreamTrack) => track.stop())
-  isCameraReady.value = false
-}
+  mediaStream?.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+  isCameraReady.value = false;
+};
 
 // 滚动到底部
 const scrollToBottom = (): void => {
@@ -387,18 +450,17 @@ const scrollToBottom = (): void => {
     if (chatWindowRef.value) {
       chatWindowRef.value.scrollTo({
         top: chatWindowRef.value.scrollHeight,
-        behavior: 'smooth'
-      })
+        behavior: "smooth",
+      });
     }
-  })
-}
+  });
+};
 
 // AI提问
 const askAiQuestion = (question: string): void => {
-  chatHistory.value.push({ role: 'assistant', content: question })
-  scrollToBottom()
-}
-
+  chatHistory.value.push({ role: "assistant", content: question });
+  scrollToBottom();
+};
 
 // // 修改后的开始面试
 // const startInterview = async (): Promise<void> => {
@@ -437,8 +499,8 @@ const askAiQuestion = (question: string): void => {
 //   }
 // };
 const startInterview = () => {
-  router.push('/interview/create')
-}
+  router.push("/interview/create");
+};
 
 // 修改后的结束面试
 const endInterview = (): void => {
@@ -450,22 +512,24 @@ const endInterview = (): void => {
 
   // 关闭WebSocket
   if (websocket) {
-    websocket.send(JSON.stringify({
-      data: {
-        status: 2,
-        format: "audio/L16;rate=16000",
-        encoding: "raw",
-        audio: '',
-      },
-    }));
+    websocket.send(
+      JSON.stringify({
+        data: {
+          status: 2,
+          format: "audio/L16;rate=16000",
+          encoding: "raw",
+          audio: "",
+        },
+      })
+    );
     websocket.close();
   }
 
-  ElMessage.info('面试已结束。');
+  ElMessage.info("面试已结束。");
 };
 
 // 生命周期钩子
-onMounted(startCamera)
+onMounted(startCamera);
 onUnmounted(() => {
   stopCamera();
   endInterview(); // 确保清理所有资源
@@ -491,7 +555,8 @@ onUnmounted(() => {
   display: flex;
 }
 
-.video-card, .chat-card {
+.video-card,
+.chat-card {
   width: 100%;
   height: 100%;
   display: flex;
@@ -677,12 +742,22 @@ onUnmounted(() => {
   animation: thinking-dots 1.4s infinite ease-in-out both;
 }
 
-.content.thinking .dot:nth-child(1) { animation-delay: -0.32s; }
-.content.thinking .dot:nth-child(2) { animation-delay: -0.16s; }
+.content.thinking .dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.content.thinking .dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
 
 @keyframes thinking-dots {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1.0); }
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
 }
 
 .message-time {
@@ -716,9 +791,18 @@ onUnmounted(() => {
 }
 
 @keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.7; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* Scrollbar styling */
@@ -738,5 +822,76 @@ onUnmounted(() => {
 
 .chat-window::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+.digital-human-video-container {
+  padding: 0 16px 16px;
+  margin-top: auto;
+}
+
+.digital-human-video-container .video-wrapper {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  background-color: #f0f2f5;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--el-border-color);
+}
+
+.digital-human-video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background-color: #000;
+}
+
+.video-loading {
+  position: absolute;
+  color: var(--el-text-color-secondary);
+  text-align: center;
+}
+
+.video-loading p {
+  margin-top: 10px;
+}
+/* 数字人视频容器 */
+.digital-human-video-container {
+  padding: 0 16px 16px;
+  margin-top: auto;
+  background-color: #f5f7fa; /* 添加与界面协调的背景色 */
+}
+
+.digital-human-video-container .video-wrapper {
+  position: relative;
+  width: 100%;
+  height: 400px; /* 固定高度 */
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000; /* 容器背景色 */
+}
+
+.digital-human-video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 填充容器，可能会裁剪 */
+  /* 或者使用以下方式保持比例但填充背景 */
+  /*
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  */
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .digital-human-video-container .video-wrapper {
+    height: 150px;
+  }
 }
 </style>

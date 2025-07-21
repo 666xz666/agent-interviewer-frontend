@@ -15,9 +15,17 @@
         </button>
         <div v-if="exercise.showAnswer" class="answer">
           <strong>答案:</strong> {{ exercise.answer }}
+          <button @click="playAudio" class="audio-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
+              <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0v5zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3z"/>
+            </svg>
+            播放语音
+          </button>
         </div>
       </div>
     </div>
+    <audio ref="audioPlayer" :src="audioUrl" hidden></audio>
   </div>
 </template>
 
@@ -26,6 +34,7 @@ export default {
   name: 'ExercisePage',
   data() {
     return {
+      audioUrl: 'https://pic--oss.oss-cn-beijing.aliyuncs.com/audio/dd5b80823f9644b385fc20430029b4b4agent-interviewer1753087151778.mp3',
       exercises: [
         {
           question: "什么是 Java 的垃圾回收机制？它是如何工作的？",
@@ -73,6 +82,9 @@ export default {
   methods: {
     toggleAnswer(index) {
       this.exercises[index].showAnswer = !this.exercises[index].showAnswer;
+    },
+    playAudio() {
+      this.$refs.audioPlayer.play();
     }
   }
 }
@@ -81,7 +93,7 @@ export default {
 <style scoped>
 .exercise-page {
   max-width: 800px;
-  margin: 0 auto;
+  margin:  auto;
   padding: 20px;
   font-family: Arial, sans-serif;
 }
@@ -120,6 +132,7 @@ h1 {
   cursor: pointer;
   font-size: 14px;
   transition: background-color 0.3s;
+  margin-right: 10px;
 }
 
 .show-answer-btn:hover {
@@ -133,5 +146,27 @@ h1 {
   border-left: 4px solid #3498db;
   border-radius: 4px;
   line-height: 1.6;
+}
+
+.audio-btn {
+  display: inline-flex;
+  align-items: center;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 10px;
+  transition: background-color 0.3s;
+}
+
+.audio-btn:hover {
+  background-color: #27ae60;
+}
+
+.audio-btn svg {
+  margin-right: 5px;
 }
 </style>

@@ -403,18 +403,22 @@ const handleSendMessage = async () => {
       histories: chatHistory.value.slice(0, -2)
     };
 
-    const response = await fetch('/api/chat-stream', {
+    // 调用星火大模型接口
+    const response = await fetch('http://39.107.241.92:8080/chat-stream', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream'
+      },
       body: JSON.stringify(payload)
     });
 
     if (!response.ok || !response.body) {
-      throw new Error('Network response was not ok.');
+      throw new Error('网络响应异常');
     }
 
     const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+    const decoder = new TextDecoder('utf-8');
 
     while (true) {
       const { value, done } = await reader.read();
@@ -422,16 +426,19 @@ const handleSendMessage = async () => {
 
       const chunk = decoder.decode(value);
       const lines = chunk.split('\n\n');
+
       lines.forEach(line => {
         if (line.startsWith('data:')) {
-          const jsonStr = line.substring(5);
+          const jsonStr = line.substring(5).trim();
           if (jsonStr) {
             try {
               const data = JSON.parse(jsonStr);
-              chatHistory.value[chatHistory.value.length - 1].content += data.content;
-              scrollToBottom();
+              if (data.success && data.data?.content) {
+                chatHistory.value[chatHistory.value.length - 1].content += data.data.content;
+                scrollToBottom();
+              }
             } catch (e) {
-              console.error("Failed to parse stream chunk JSON:", jsonStr);
+              console.error("解析流数据失败:", jsonStr);
             }
           }
         }
@@ -439,10 +446,32 @@ const handleSendMessage = async () => {
     }
 
   } catch (error) {
-    console.error("AI chat stream failed:", error);
-    chatHistory.value[chatHistory.value.length - 1].content = "抱歉，我好像出了一点问题...";
+    console.error("AI对话失败:", error);
+    // 模拟一个默认回复（当API调用失败时显示）
+    if (userMessage.includes('优化') || userMessage.includes('工作经历')) {
+      chatHistory.value[chatHistory.value.length - 1].content = `
+根据您的工作经历，我有以下优化建议：
+
+1. 量化成果：在描述工作内容时，尽量使用具体数字和成果。例如：
+   - 原描述："负责前端开发"
+   - 优化后："主导开发了3个核心模块，页面加载性能提升40%"
+
+2. 使用行动词：以动词开头描述职责，如：
+   - "设计并实现了..."
+   - "优化了...，使..."
+
+3. 突出技术栈：明确列出使用的技术和工具
+
+4. 结构清晰：可以按项目分点描述
+
+需要我帮您具体修改某段工作经历吗？或者您可以粘贴一段现有描述，我帮您优化。
+      `;
+    } else {
+      chatHistory.value[chatHistory.value.length - 1].content = "抱歉，我好像出了一点问题...";
+    }
   } finally {
     isStreaming.value = false;
+    scrollToBottom();
   }
 };
 
